@@ -28,9 +28,11 @@ const (
 
 // Subcommand names.
 const (
-	commandScan = "scan"
-	commandTui  = "tui"
-	commandHelp = "help"
+	commandScan       = "scan"
+	commandTui        = "tui"
+	commandHelp       = "help"
+	commandWatch      = "watch"
+	commandNotifyTest = "notify-test"
 
 	// Top-level flags handled before the tui takes over a leading flag.
 	flagPrefix      = "-"
@@ -103,13 +105,17 @@ const (
 Run without a command to open the interactive view (same as "tui").
 
 Commands:
-  tui       interactive full-screen view that refreshes automatically (default)
-  scan      one-shot report for scripts and cron (table or JSON);
-            add --external to also scan from the network side with nmap
-  version   print the version
-  help      show this help
+  tui         interactive full-screen view that refreshes automatically (default)
+  scan        one-shot report for scripts and cron (table or JSON);
+              add --external to also scan from the network side with nmap
+  watch       headless loop that sends Telegram alerts for new risky ports
+              (this is the only feature that sends data to a third party)
+  notify-test send one test message to the configured Telegram chat
+  version     print the version
+  help        show this help
 
-Run "exposedwatch tui -h" or "exposedwatch scan -h" for flags.
+Run "exposedwatch tui -h", "exposedwatch scan -h", "exposedwatch watch -h" or
+"exposedwatch notify-test -h" for flags.
 The tui accepts --interval, --theme auto|dark|light and --no-connections.
 Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 `
