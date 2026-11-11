@@ -43,7 +43,7 @@ func (model Model) sidebarBadgeFor(module Module) sidebarBadge {
 	case ModuleFirewall:
 		return model.firewallBadge()
 	case ModuleAlerts:
-		return sidebarBadge{text: sidebarBadgeOff}
+		return model.alertsBadge()
 	default:
 		return sidebarBadge{}
 	}

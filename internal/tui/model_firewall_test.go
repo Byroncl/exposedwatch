@@ -353,8 +353,10 @@ func TestSidebarBadgeOfTheFirewallModule(testRun *testing.T) {
 }
 
 func TestFirewallSidebarEntryIsNoLongerAPlaceholder(testRun *testing.T) {
-	if ModuleFirewall.isPlaceholder() || !ModuleAlerts.isPlaceholder() || !ModuleSettings.isPlaceholder() {
-		testRun.Fatal("only Alerts and Settings are placeholders now")
+	for module := ModuleOverview; module < moduleCount; module++ {
+		if strings.Contains(showModule(testRun, newTestModel(testRun), module).View(), "Coming soon") {
+			testRun.Fatalf("%v must not be a placeholder any more", module)
+		}
 	}
 }
 

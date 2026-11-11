@@ -25,8 +25,14 @@ func (model Model) contentPanels(frame layout) []string {
 		return model.topRemoteView(frame)
 	case TabFirewall:
 		return model.firewallStatusPanel(frame)
-	case TabAlerts, TabSettings:
-		return model.placeholderPanel(frame)
+	case TabAlertsStatus:
+		return model.alertsStatusPanel(frame)
+	case TabAlertsPreview:
+		return model.alertsPreviewPanel(frame)
+	case TabSettingsTelegram:
+		return model.telegramFormPanel(frame)
+	case TabSettingsDisplay:
+		return model.settingsDisplayPanel(frame)
 	default:
 		panels := model.tablePanel(frame)
 		if frame.showDetail {

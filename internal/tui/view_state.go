@@ -8,4 +8,6 @@ const (
 	ViewTable ViewState = iota
 	ViewFilterInput
 	ViewHelp
+	// ViewFieldEdit is a row of the settings form being typed into.
+	ViewFieldEdit
 )

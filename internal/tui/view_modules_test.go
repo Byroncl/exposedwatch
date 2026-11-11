@@ -70,13 +70,13 @@ func TestDisabledConnectionsShowTheDisabledMessageOnBothInnerTabs(testRun *testi
 	}
 }
 
-func TestPlaceholderModulesAreHonest(testRun *testing.T) {
+func TestAlertsAndSettingsAreHonestWithoutAConfigStore(testRun *testing.T) {
 	cases := []struct {
 		module Module
 		want   []string
 	}{
-		{ModuleAlerts, []string{"Coming soon", "Telegram"}},
-		{ModuleSettings, []string{"Coming soon", "notification", "display"}},
+		{ModuleAlerts, []string{"Telegram", "not available"}},
+		{ModuleSettings, []string{"Telegram", "not available"}},
 	}
 	for _, testCase := range cases {
 		rendered := showModule(testRun, newTestModel(testRun), testCase.module).View()
@@ -91,13 +91,13 @@ func TestPlaceholderModulesAreHonest(testRun *testing.T) {
 func TestSettingsShowsCurrentValuesReadOnly(testRun *testing.T) {
 	model := New(Options{Scanner: fakeScanner{}, Connections: fakeConnectionSource{}, Interval: testInterval, Version: testVersion, Theme: ThemeLight})
 	model = sizedModel(testRun, model, testWidth, testHeight)
-	rendered := showModule(testRun, model, ModuleSettings).View()
+	rendered := showView(testRun, model, moduleView{ModuleSettings, 1}).View()
 	for _, want := range []string{"Theme", "light", "Refresh interval", "2s", "Connections", "enabled"} {
 		if !strings.Contains(rendered, want) {
 			testRun.Errorf("settings lacks %q:\n%s", want, rendered)
 		}
 	}
-	disabled := showModule(testRun, newTestModel(testRun), ModuleSettings).View()
+	disabled := showView(testRun, newTestModel(testRun), moduleView{ModuleSettings, 1}).View()
 	if !strings.Contains(disabled, "disabled") || !strings.Contains(disabled, "auto") {
 		testRun.Errorf("settings must reflect disabled connections and the default theme:\n%s", disabled)
 	}
@@ -137,15 +137,15 @@ func TestTopRemotePanelsAreSizedToTheirRows(testRun *testing.T) {
 	}
 }
 
-func TestPlaceholderBoxIsSizedToItsText(testRun *testing.T) {
-	model := showModule(testRun, newTestModel(testRun), ModuleAlerts)
+func TestDisplayBoxIsSizedToItsText(testRun *testing.T) {
+	model := showView(testRun, newTestModel(testRun), moduleView{ModuleSettings, 1})
 	rendered := model.View()
 	if strings.Count(rendered, "│ │") > 0 && len(strings.Split(rendered, "\n")) != testHeight {
 		testRun.Fatal("frame must keep its height")
 	}
 	frame := model.computeLayout()
-	box := model.placeholderPanel(frame)
+	box := model.settingsDisplayPanel(frame)
 	if len(box) >= frame.panelLines {
-		testRun.Fatalf("placeholder box has %d lines in an area of %d", len(box), frame.panelLines)
+		testRun.Fatalf("display box has %d lines in an area of %d", len(box), frame.panelLines)
 	}
 }

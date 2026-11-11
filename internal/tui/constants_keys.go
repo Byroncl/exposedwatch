@@ -16,6 +16,7 @@ const (
 	keySearch           = "/"
 	keyHelp             = "?"
 	keyEscape           = "esc"
+	keyEnter            = "enter"
 	keyNextModule       = "tab"
 	keyPreviousModule   = "shift+tab"
 	keyNextInnerTab     = "]"
@@ -35,10 +36,12 @@ type keyBinding struct {
 var keyBindings = []keyBinding{
 	{Keys: "tab / shift+tab", Description: "next / previous module"},
 	{Keys: "] / [", Description: "next / previous tab of the module"},
-	{Keys: "1-9", Description: "jump to that tab of the module (Ports: Findings, All ports, Changes; Connections: Live, Top remote; Firewall: Status, Ports)"},
+	{Keys: "1-9", Description: "jump to that tab of the module (Ports: Findings, All ports, Changes; Connections: Live, Top remote; Firewall: Status, Ports; Alerts: Status, Preview; Settings: Telegram, Display)"},
 	{Keys: "b", Description: "show or hide the sidebar"},
 	{Keys: "up/k down/j", Description: "move selection"},
 	{Keys: "g / G", Description: "jump to top / bottom"},
+	{Keys: "enter", Description: "Settings > Telegram: toggle, cycle, start editing a value, or run [ Save ] / [ Send test message ]"},
+	{Keys: "while editing", Description: "Settings > Telegram: type or paste the value; enter saves the value, esc cancels, backspace deletes; no other key acts (ctrl+c still quits)"},
 	{Keys: "r", Description: "refresh now (also re-reads the firewall rules)"},
 	{Keys: "s", Description: "cycle sort (severity, port, process); Connections: direction, local port, remote, process, age; Firewall ports: verdict, port, process"},
 	{Keys: "f", Description: "cycle minimum severity filter; Findings and All ports only"},

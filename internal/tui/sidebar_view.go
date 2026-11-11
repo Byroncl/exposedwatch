@@ -36,9 +36,6 @@ func (model Model) sidebarPanel(frame layout) []string {
 func (model Model) sidebarRow(module Module, mode SidebarMode, innerWidth int) string {
 	selected := module == model.activeModule
 	look := model.styles.plain
-	if module.isPlaceholder() {
-		look = model.styles.dim
-	}
 	markerLook := look
 	if selected {
 		look = look.Background(colorSelected).Bold(true)

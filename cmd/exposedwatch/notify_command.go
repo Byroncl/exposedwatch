@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"github.com/Byroncl/exposedwatch/internal/adapters/configfile"
-	"github.com/Byroncl/exposedwatch/internal/domain"
 )
 
 // runNotifyTest executes the notify-test subcommand.
@@ -40,14 +39,7 @@ func runNotifyTestWith(ctx context.Context, runtime commandRuntime, arguments []
 	}
 	fmt.Fprintf(stdout, notifySendingFormat, configfile.MaskToken(settings.BotToken), loaded.TokenSource, loaded.ChatSource)
 
-	hostName := runtime.hostNameOrUnknown()
-	testAlert := domain.Alert{
-		Kind:     domain.AlertKindTest,
-		Severity: domain.Info,
-		Title:    fmt.Sprintf(notifyTestAlertTitleFormat, hostName),
-		Body:     notifyBodyText,
-		Host:     hostName,
-	}
+	testAlert := newTestAlert(runtime.hostNameOrUnknown())
 	if err := runtime.NewNotifier(settings.BotToken, settings.ChatID).Send(ctx, testAlert); err != nil {
 		// The adapter already redacts; masking again is defence in depth.
 		fmt.Fprintf(stderr, notifyFailedFormat, maskSecret(err.Error(), settings.BotToken))

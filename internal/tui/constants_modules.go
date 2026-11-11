@@ -30,11 +30,16 @@ const (
 	tabTitleFirewallPorts  = "Ports"
 )
 
-// Placeholder modules.
+// Settings and Alerts inner tab titles.
 const (
-	placeholderHeading        = "Coming soon"
-	placeholderAlertsText     = "Will send Telegram notifications when a new exposed port or a serious finding appears."
-	placeholderSettingsText   = "Will hold the notification and display preferences."
+	tabTitleAlertsStatus     = "Status"
+	tabTitleAlertsPreview    = "Preview"
+	tabTitleSettingsTelegram = "Telegram"
+	tabTitleSettingsDisplay  = "Display"
+)
+
+// Display tab of the Settings module.
+const (
 	settingsHeading           = "Current values (read-only)"
 	settingsThemeFormat       = "Theme:            %s"
 	settingsIntervalFormat    = "Refresh interval: %s"

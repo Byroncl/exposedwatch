@@ -26,6 +26,7 @@ const (
 	ActionToggleSidebar
 	ActionToggleLoopback
 	ActionToggleInboundOnly
+	ActionActivate
 )
 
 // actionForKey maps a key press to an action when browsing the table.
@@ -65,6 +66,8 @@ func actionForKey(keyPress tea.KeyMsg) Action {
 		return ActionToggleLoopback
 	case keyInboundOnly:
 		return ActionToggleInboundOnly
+	case keyEnter:
+		return ActionActivate
 	default:
 		if _, isInnerTabKey := parseInnerTabKey(keyPress.String()); isInnerTabKey {
 			return ActionJumpInnerTab
