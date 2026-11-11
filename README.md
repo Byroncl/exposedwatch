@@ -1,83 +1,63 @@
+English | [Español](README.es.md)
+
 # exposedwatch
 
-A small console tool that shows what a Linux server exposes to the network.
-It reads the host's listening ports (from `/proc/net`) and Docker containers' published ports, then flags risky exposure, such as a database bound to `0.0.0.0`.
+[![CI](https://github.com/Byroncl/exposedwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Byroncl/exposedwatch/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Byroncl/exposedwatch)](https://github.com/Byroncl/exposedwatch/releases/latest)
+[![License](https://img.shields.io/github/license/Byroncl/exposedwatch)](LICENSE)
 
-```text
-$ exposedwatch scan --no-docker --min-severity low
-SEVERITY  PORT  PROTOCOL  BIND ADDRESS  EXPOSURE        SOURCE  PROCESS/CONTAINER  TITLE
-high      5432  tcp       0.0.0.0       all-interfaces  host    -                  Database or cache reachable beyond loopback
-high      5432  tcp       ::            all-interfaces  host    -                  Database or cache reachable beyond loopback
+See what your Linux server exposes to the network, live in your terminal, and get flagged when something risky is open, such as a database bound to `0.0.0.0`.
 
-Recommendations
-  - [database-exposed] Bind the datastore to 127.0.0.1 or an internal network and require authentication.
+It reads the host's listening ports (from `/proc/net`) and Docker containers' published ports.
 
-52 port(s) scanned, 2 finding(s).
-```
+## Quick start
 
-> **Release status:** no release has been published yet. The install commands below work once the first `v*` tag is released on GitHub.
-
-## Install on Ubuntu/Debian
-
-Download the `.deb` for your machine architecture (`amd64` or `arm64`) from the latest release and install it:
+On Ubuntu/Debian (`amd64` or `arm64`):
 
 ```sh
 curl -fLO "https://github.com/Byroncl/exposedwatch/releases/latest/download/exposedwatch_linux_$(dpkg --print-architecture).deb"
 sudo apt install "./exposedwatch_linux_$(dpkg --print-architecture).deb"
-exposedwatch version
+sudo exposedwatch
 ```
 
-Verify the download (optional):
+`sudo exposedwatch` opens a full-screen, auto-refreshing view (like `htop`). Press `?` for help and `q` to quit.
 
-```sh
-curl -fLO https://github.com/Byroncl/exposedwatch/releases/latest/download/checksums.txt
-sha256sum --ignore-missing -c checksums.txt
-```
+| Command | What it does |
+| ------- | ------------ |
+| `exposedwatch` | Interactive full-screen view (same as `exposedwatch tui`) |
+| `exposedwatch scan` | One-shot report for scripts and cron (table or JSON) |
+| `exposedwatch version` | Print the version (also `--version`) |
+| `exposedwatch help` | Show help (also `-h`, `--help`) |
 
-Checksums are in `checksums.txt`; the file names in it carry the release's naming, so run the check in the directory you downloaded to.
+Flags placed first, such as `exposedwatch --interval 5s`, go to the interactive view.
 
-### Alternatives
+## What it detects
 
-Tarball:
+Rules are matched by port. A rule fires when the port is exposed at least as widely as the minimum exposure shown.
 
-```sh
-curl -fLO "https://github.com/Byroncl/exposedwatch/releases/latest/download/exposedwatch_linux_$(dpkg --print-architecture).tar.gz"
-tar -xzf "exposedwatch_linux_$(dpkg --print-architecture).tar.gz" exposedwatch
-sudo install -m 0755 exposedwatch /usr/local/bin/exposedwatch
-```
+| Service | Port(s) | Minimum exposure | Severity |
+| ------- | ------- | ---------------- | -------- |
+| SSH | 22 | `all-interfaces` | medium |
+| Telnet | 23 | `all-interfaces` | critical |
+| Database or cache: MySQL, PostgreSQL, Redis, MongoDB, Elasticsearch, Memcached | 3306, 5432, 6379, 27017, 9200, 11211 | `private` | high |
+| Docker API (unauthenticated) | 2375 | `all-interfaces` | critical |
+| RDP | 3389 | `all-interfaces` | high |
+| SMB / NetBIOS | 445, 139 | `all-interfaces` | high |
+| Any other port | any | `all-interfaces` | info |
 
-With Go:
-
-```sh
-go install github.com/Byroncl/exposedwatch/cmd/exposedwatch@latest
-```
-
-### Uninstall
-
-```sh
-sudo apt remove exposedwatch
-```
-
-## Usage
-
-```sh
-sudo exposedwatch scan                       # table output
-sudo exposedwatch scan --format json         # machine-readable output
-sudo exposedwatch scan --min-severity medium # show and gate on medium and above
-sudo exposedwatch scan --no-docker           # skip Docker discovery
-```
+Exposure levels, from narrowest to widest: `loopback`, `private`, `all-interfaces`, `public` (bound to a specific public IP address). Each finding includes a recommendation.
 
 Severities: `info`, `low`, `medium`, `high`, `critical`.
 
-### Interactive TUI
+## Interactive view
 
 ```sh
-sudo exposedwatch tui                  # full-screen view, refreshes every 2s
-sudo exposedwatch tui --interval 5s    # custom refresh interval (minimum 1s)
-sudo exposedwatch tui --no-docker      # skip Docker discovery
+sudo exposedwatch                      # refreshes every 2s
+sudo exposedwatch --interval 5s        # custom refresh interval (minimum 1s)
+sudo exposedwatch --no-docker          # skip Docker discovery
 ```
 
-`tui` accepts `--proc-root`, `--docker-socket`, `--no-docker` and `--interval`. It needs an interactive terminal; otherwise it exits with code 2. A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
+Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`. It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
 
 | Key | Action |
 | --- | ------ |
@@ -90,7 +70,30 @@ sudo exposedwatch tui --no-docker      # skip Docker discovery
 | `?` | Toggle help |
 | `q` / `ctrl+c` | Quit |
 
-Exit codes:
+## Scripts, cron and CI: `scan`
+
+```sh
+sudo exposedwatch scan                       # table output
+sudo exposedwatch scan --format json         # machine-readable output
+sudo exposedwatch scan --min-severity medium # show and gate on medium and above
+sudo exposedwatch scan --no-docker           # skip Docker discovery
+```
+
+Example output:
+
+```text
+$ exposedwatch scan --no-docker --min-severity high
+SEVERITY  PORT  PROTOCOL  BIND ADDRESS  EXPOSURE        SOURCE  PROCESS/CONTAINER  TITLE
+high      5432  tcp       0.0.0.0       all-interfaces  host    -                  Database or cache reachable beyond loopback
+high      5432  tcp       ::            all-interfaces  host    -                  Database or cache reachable beyond loopback
+
+Recommendations
+  - [database-exposed] Bind the datastore to 127.0.0.1 or an internal network and require authentication.
+
+54 port(s) scanned, 2 finding(s).
+```
+
+Exit codes (shared by all commands):
 
 | Code | Meaning |
 | ---- | ------- |
@@ -105,14 +108,46 @@ Cron or CI example: fail the job when something medium or worse is exposed.
 exposedwatch scan --min-severity medium --format json > exposure.json || echo "exposure check exited with $?"
 ```
 
-### Notes
+## Install
+
+### Ubuntu/Debian (`.deb`, recommended)
+
+See [Quick start](#quick-start). Verify the download (optional):
+
+```sh
+curl -fLO https://github.com/Byroncl/exposedwatch/releases/latest/download/checksums.txt
+sha256sum --ignore-missing -c checksums.txt
+```
+
+Checksums are in `checksums.txt`; run the check in the directory you downloaded to.
+
+### Tarball
+
+```sh
+curl -fLO "https://github.com/Byroncl/exposedwatch/releases/latest/download/exposedwatch_linux_$(dpkg --print-architecture).tar.gz"
+tar -xzf "exposedwatch_linux_$(dpkg --print-architecture).tar.gz" exposedwatch
+sudo install -m 0755 exposedwatch /usr/local/bin/exposedwatch
+```
+
+### With Go
+
+```sh
+go install github.com/Byroncl/exposedwatch/cmd/exposedwatch@latest
+```
+
+### Uninstall
+
+```sh
+sudo apt remove exposedwatch
+```
+
+## Notes
 
 - Run with `sudo` so process names can be resolved; without it, ports are still listed but the process column may be empty.
 - Docker discovery reads the Docker socket (`/var/run/docker.sock` by default, change with `--docker-socket`). Your user needs access to it, otherwise Docker is reported as a source that could not be read.
+- Read-only: it reads `/proc` and sends a single `GET` request to the Docker socket to list containers. It does not open or change ports, and does not modify containers.
 
-## Status and roadmap
-
-Available now: `exposedwatch scan` (host ports and Docker containers, risk rules, table/JSON output, exit codes) and `exposedwatch tui` (interactive auto-refreshing view).
+## Roadmap
 
 Planned, **not yet available**:
 
