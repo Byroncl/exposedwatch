@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Byroncl/exposedwatch/internal/adapters/procnet"
 	"github.com/Byroncl/exposedwatch/internal/app"
 	"github.com/Byroncl/exposedwatch/internal/tui"
 )
@@ -28,14 +29,24 @@ func runTui(arguments []string, stdout, stderr io.Writer) ExitCode {
 		return ExitUsage
 	}
 	err = tui.Run(tui.Options{
-		Scanner:  app.NewScanService(buildSources(options.ScanOptions)),
-		Interval: options.Interval,
-		Version:  version,
-		Theme:    options.Theme,
+		Scanner:     app.NewScanService(buildSources(options.ScanOptions)),
+		Connections: buildConnectionSource(options),
+		Interval:    options.Interval,
+		Version:     version,
+		Theme:       options.Theme,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, tuiFailedFormat, err)
 		return ExitRuntimeError
 	}
 	return ExitOK
+}
+
+// buildConnectionSource builds the connection service over the same proc
+// tree as the port scan, or returns nil when connections are disabled.
+func buildConnectionSource(options TuiOptions) tui.ConnectionSnapshotter {
+	if options.NoConnections {
+		return nil
+	}
+	return app.NewConnectionService(procnet.New(options.ProcRoot))
 }

@@ -14,12 +14,12 @@ var layoutSizes = []tea.WindowSizeMsg{
 }
 
 func TestEveryTabAndHelpStayInsideTheTerminal(testRun *testing.T) {
-	base := newTestModel(testRun)
+	base := newConnectionsModel(testRun, fullConnections())
 	base = refreshWith(testRun, base, reportWithout(sampleReportWithQuietPort(), 3306), 1)
 	base = refreshWith(testRun, base, reportWith(sampleReportWithQuietPort(), freshPortNumber), 2)
 	for _, size := range layoutSizes {
 		sized := applyMessage(testRun, base, size)
-		for _, key := range []string{"1", "2", "3"} {
+		for _, key := range []string{"1", "2", "3", "4"} {
 			tabbed := typeKeys(testRun, sized, key)
 			assertRendersWithin(testRun, tabbed, size.Width, size.Height)
 			assertRendersWithin(testRun, typeKeys(testRun, tabbed, "G"), size.Width, size.Height)
@@ -34,8 +34,24 @@ func TestWarningsAndEmptyStatesStayInsideTheTerminal(testRun *testing.T) {
 		RefreshResultMessage{Err: errDockerDown, At: testRefreshTime})
 	for _, size := range layoutSizes {
 		sized := applyMessage(testRun, failing, size)
-		for _, key := range []string{"1", "2", "3"} {
+		for _, key := range []string{"1", "2", "3", "4"} {
 			assertRendersWithin(testRun, typeKeys(testRun, sized, key), size.Width, size.Height)
+		}
+	}
+}
+
+func TestConnectionWarningsAndTruncationStayInsideTheTerminal(testRun *testing.T) {
+	failing := applyMessage(testRun, newConnectionsModel(testRun, fullConnections()),
+		ConnectionsResultMessage{Err: errConnectionsDown, At: testRefreshTime})
+	truncatedSnapshot := snapshotOf(fullConnections())
+	truncatedSnapshot.Truncated = true
+	truncated := applyMessage(testRun, newConnectionsModel(testRun, fullConnections()),
+		ConnectionsResultMessage{Snapshot: truncatedSnapshot, At: testRefreshTime})
+	for _, size := range layoutSizes {
+		for _, model := range []Model{failing, truncated} {
+			sized := applyMessage(testRun, model, size)
+			assertRendersWithin(testRun, sized, size.Width, size.Height)
+			assertRendersWithin(testRun, typeKeys(testRun, sized, "l", "G"), size.Width, size.Height)
 		}
 	}
 }
@@ -59,6 +75,8 @@ func TestLayoutPreview(testRun *testing.T) {
 		{"all ports", 110, 28, []string{"2"}},
 		{"changes", 110, 28, []string{"3"}},
 		{"findings narrow", 70, 20, nil},
+		{"connections", 110, 28, []string{"4"}},
+		{"connections narrow", 70, 20, []string{"4"}},
 	}
 	for _, preview := range previews {
 		sized := applyMessage(testRun, model, tea.WindowSizeMsg{Width: preview.width, Height: preview.height})
@@ -114,7 +132,7 @@ func TestFooterDropsLeastImportantHintsFirst(testRun *testing.T) {
 func TestHeadersStartAboveTheirCellContent(testRun *testing.T) {
 	model := previewModel(testRun)
 	for _, width := range []int{70, 90, 110, 140} {
-		for _, key := range []string{"1", "2", "3"} {
+		for _, key := range []string{"1", "2", "3", "4"} {
 			sized := applyMessage(testRun, model, tea.WindowSizeMsg{Width: width, Height: 40})
 			sized = typeKeys(testRun, sized, key)
 			frame := sized.computeLayout()

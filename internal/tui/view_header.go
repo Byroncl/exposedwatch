@@ -20,7 +20,7 @@ func (model Model) headerLines(width int) []string {
 	return []string{
 		clampWidth(model.titleLine(), width),
 		clampWidth(model.chipsLine(), width),
-		clampWidth(model.riskLine(), width),
+		clampWidth(model.riskLine(width), width),
 	}
 }
 
@@ -56,7 +56,7 @@ func (model Model) chipsLine() string {
 
 // riskLine shows the risk gauge, the per-source counters and the session
 // counters of opened and closed ports.
-func (model Model) riskLine() string {
+func (model Model) riskLine(width int) string {
 	level := riskLevelOf(model.report)
 	filled, empty := level.gaugeCells()
 	levelStyle := model.styles.safe
@@ -73,7 +73,8 @@ func (model Model) riskLine() string {
 	}
 	changes := model.styles.opened.Render(fmt.Sprintf(openedCountFormat, model.tracker.openedTotal)) + headerJoin +
 		model.styles.closed.Render(fmt.Sprintf(closedCountFormat, model.tracker.closedTotal))
-	return risk + headerJoin + model.styles.dim.Render(strings.Join(sources, headerJoin)) + headerJoin + changes
+	line := risk + headerJoin + model.styles.dim.Render(strings.Join(sources, headerJoin)) + headerJoin + changes
+	return line + model.connectionCounterFitting(line, width)
 }
 
 func sourceLabel(source domain.Source) string {

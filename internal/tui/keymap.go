@@ -23,6 +23,8 @@ const (
 	ActionShowFindings
 	ActionShowAllPorts
 	ActionShowChanges
+	ActionShowConnections
+	ActionToggleLoopback
 )
 
 // actionForKey maps a key press to an action when browsing the table.
@@ -58,6 +60,10 @@ func actionForKey(keyPress tea.KeyMsg) Action {
 		return ActionShowAllPorts
 	case keyChangesTab:
 		return ActionShowChanges
+	case keyConnectionsTab:
+		return ActionShowConnections
+	case keyLoopback:
+		return ActionToggleLoopback
 	default:
 		return ActionNone
 	}

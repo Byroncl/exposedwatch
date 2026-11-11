@@ -16,6 +16,8 @@ func (model Model) Update(incomingMessage tea.Msg) (tea.Model, tea.Cmd) {
 		return model.handleTick()
 	case RefreshResultMessage:
 		return model.handleRefreshResult(typedMessage), nil
+	case ConnectionsResultMessage:
+		return model.handleConnectionsResult(typedMessage), nil
 	case tea.KeyMsg:
 		return model.handleKey(typedMessage)
 	default:
@@ -23,12 +25,27 @@ func (model Model) Update(incomingMessage tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
+// handleTick schedules the next tick and starts whichever reads are idle. The
+// scan and the connection read are independent: a slow one never holds back
+// the other.
 func (model Model) handleTick() (tea.Model, tea.Cmd) {
-	if model.refreshing {
-		return model, tickCommand(model.interval)
+	commands := []tea.Cmd{tickCommand(model.interval)}
+	commands = append(commands, model.startIdleReads()...)
+	return model, tea.Batch(commands...)
+}
+
+// startIdleReads marks the idle reads as running and returns their commands.
+func (model *Model) startIdleReads() []tea.Cmd {
+	var commands []tea.Cmd
+	if !model.refreshing {
+		model.refreshing = true
+		commands = append(commands, scanCommand(model.scanner, model.clock))
 	}
-	model.refreshing = true
-	return model, tea.Batch(scanCommand(model.scanner, model.clock), tickCommand(model.interval))
+	if model.connectionsEnabled() && !model.connectionsRefreshing {
+		model.connectionsRefreshing = true
+		commands = append(commands, connectionsCommand(model.connections, model.clock))
+	}
+	return commands
 }
 
 // handleRefreshResult stores a scan outcome. A failed scan keeps the previous

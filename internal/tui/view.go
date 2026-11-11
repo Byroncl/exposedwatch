@@ -13,7 +13,7 @@ func (model Model) View() string {
 	} else {
 		bodyPart = model.tablePanel(frame)
 		if frame.showDetail {
-			bodyPart = append(bodyPart, model.detailPanel(frame.width)...)
+			bodyPart = append(bodyPart, model.bottomPanels(frame.width)...)
 		}
 	}
 	footerPart := []string{model.footerLine(frame.width)}
