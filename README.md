@@ -151,6 +151,97 @@ sudo exposedwatch scan --external
 - TCP connect scan only (`-sT`); UDP is not scanned. Use `--external-ports 22,80,443,8000-8100` to choose ports (default: nmap's top 1000) and `--external-timeout` to bound the run (default 2m).
 - nmap must be installed (the `.deb` only recommends it). If it is missing, the external source is reported as an error and the host and Docker results still print.
 
+## Alerts (Telegram)
+
+`exposedwatch watch` runs headless (no terminal needed), scans on an interval and sends a Telegram message when a **new** risky port appears. It is off until you configure it.
+
+**Privacy: read this first.**
+
+- Alerts are sent to Telegram's servers (`api.telegram.org`), a third party. Each message contains this host's name, the port and protocol, the severity, the process name, the rule id and a short recommendation.
+- Alerts never contain remote IP addresses: they describe what this machine exposes, not who connects to it.
+- This is the only feature that makes an outbound connection, besides the optional nmap scan. `scan` and the interactive view send nothing anywhere.
+- The bot token is a secret. The tool shows it only masked (for example `123456789:****`) and removes it from the errors and logs it produces, and it never writes the token anywhere itself. Keep the file you put it in at mode `0600`, or better, keep the token out of the disk in an environment variable.
+- Standard proxy environment variables (`HTTPS_PROXY`, `NO_PROXY`) are honored. HTTPS goes through the proxy with `CONNECT`, so the proxy sees the destination host (`api.telegram.org`) but not the request path, which contains the bot token.
+
+### Set up
+
+1. Create a bot: open a chat with [@BotFather](https://t.me/BotFather) in Telegram, send `/newbot` and follow the questions. BotFather gives you the bot token.
+2. Find your chat id: send any message to your new bot (for a group, add the bot to the group and write there). Then open `https://api.telegram.org/bot<TOKEN>/getUpdates` with your token and look for `"chat":{"id":...}` in the answer. Group ids are negative numbers.
+3. Put the values in the config file or in the environment, then check them:
+
+```sh
+exposedwatch notify-test
+```
+
+`notify-test` sends one test message and prints either a success line or the failure. It shows the masked token and whether it came from the file or the environment, never the token itself. Exit codes: 0 ok, 1 runtime error, 2 usage error.
+
+### Configuration
+
+The config file is JSON. Its default location is `/etc/exposedwatch/config.json` when you run as root, and `$XDG_CONFIG_HOME/exposedwatch/config.json` (or `~/.config/exposedwatch/config.json`) otherwise. `--config PATH` overrides it.
+
+No command writes this file yet: you create and edit it by hand. As root, create it private before putting any secret in it:
+
+```sh
+sudo install -d -m 700 /etc/exposedwatch
+sudo install -m 600 /dev/null /etc/exposedwatch/config.json
+sudo $EDITOR /etc/exposedwatch/config.json
+```
+
+```json
+{
+  "version": 1,
+  "telegram": { "enabled": true, "bot_token": "<token>", "chat_id": "<chat id>" },
+  "alerts": { "min_severity": "high", "cooldown_minutes": 60, "interval_seconds": 60 }
+}
+```
+
+- Use mode `0600` for the file. A looser mode only produces a warning. A symbolic link, or a file not owned by the user running the tool, is refused. As root, a file whose directory can be written by group or others is refused too; other users only get a warning for that.
+- `EXPOSEDWATCH_TELEGRAM_TOKEN` and `EXPOSEDWATCH_TELEGRAM_CHAT_ID` override the file, so the token does not have to be on disk. Alerts are sent only when `telegram.enabled` is `true` and both values are set from either place.
+- `min_severity` is `info`, `low`, `medium`, `high` or `critical`. `interval_seconds` must be at least 10.
+
+### Watch
+
+```sh
+exposedwatch watch                 # loop until SIGINT or SIGTERM
+exposedwatch watch --once          # one scan, then exit (for cron)
+exposedwatch watch --interval 5m --min-severity critical
+```
+
+- The first scan of a run sends one summary ("N findings at or above high already present", at most 5 titles) and remembers the existing findings without alerting each one. After that, each finding that was not known alerts once. A finding that disappears and reappears within `cooldown_minutes` does not alert again. A source that fails during a scan (for example Docker) does not make its findings look closed.
+- A message that cannot be delivered is retried with an exponential backoff (starting at the scan interval, doubling up to 15 minutes) for up to 24 hours, and then dropped; a dropped alert makes its finding eligible to alert again. A failed send never stops the loop or blocks newer alerts. Logs go to stderr as one timestamped line each, without tokens, URLs or remote addresses.
+- A source that was unreadable during the first scan (for example Docker not started yet) is summarised once ("N existing findings from docker now visible") when it first becomes readable, instead of alerting each finding.
+- State is kept in memory only. `--once` has no state between runs, so every cron run re-sends the first-run summary of whatever is open at that moment.
+- It needs root only for what the scan needs (process names, Docker socket).
+
+Example systemd unit. **It is an untested example, shown as documentation only** (this project ships no packaging for it). It runs as root. Put the secret in a file readable only by root (`chmod 0600`) and set `"enabled": true` in the config file:
+
+```ini
+# /etc/systemd/system/exposedwatch.service
+[Unit]
+Description=exposedwatch Telegram alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/exposedwatch watch
+EnvironmentFile=/etc/exposedwatch/telegram.env
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Only conservative hardening is suggested. Stricter sandboxing options may break access to `/proc` (process names), the Docker socket or iptables, so add them only after testing.
+
+```sh
+# /etc/exposedwatch/telegram.env  (mode 0600, owner root)
+EXPOSEDWATCH_TELEGRAM_TOKEN=<token>
+EXPOSEDWATCH_TELEGRAM_CHAT_ID=<chat id>
+```
+
 ## Install
 
 ### Ubuntu/Debian (`.deb`, recommended)
@@ -188,7 +279,7 @@ sudo apt remove exposedwatch
 
 - Run with `sudo` so process names can be resolved; without it, ports are still listed but the process column may be empty.
 - Docker discovery reads the Docker socket (`/var/run/docker.sock` by default, change with `--docker-socket`). Your user needs access to it, otherwise Docker is reported as a source that could not be read.
-- Read-only: it reads `/proc` and sends a single `GET` request to the Docker socket to list containers. It does not open or change ports, and does not modify containers. With `--external`, nmap additionally opens TCP connections to the scanned targets.
+- Read-only: it reads `/proc` and sends a single `GET` request to the Docker socket to list containers. It does not open or change ports, and does not modify containers. With `--external`, nmap additionally opens TCP connections to the scanned targets. Only `watch` and `notify-test` make an outbound connection of their own: they send alerts to Telegram (see [Alerts (Telegram)](#alerts-telegram)).
 - `--nmap-path` runs the given binary with the same privileges as exposedwatch, so do not let untrusted users pass arguments to `sudo exposedwatch` through sudoers rules.
 
 ## License
