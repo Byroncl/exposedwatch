@@ -1,6 +1,9 @@
 package main
 
-import "github.com/Byroncl/exposedwatch/internal/adapters/nmapscan"
+import (
+	"github.com/Byroncl/exposedwatch/internal/adapters/nmapscan"
+	"github.com/Byroncl/exposedwatch/internal/tui"
+)
 
 // ExitCode is the process exit status.
 type ExitCode int
@@ -45,6 +48,7 @@ const (
 	flagDockerSocket = "docker-socket"
 	flagNoDocker     = "no-docker"
 	flagInterval     = "interval"
+	flagTheme        = "theme"
 
 	flagExternal         = "external"
 	flagExternalTarget   = "external-target"
@@ -58,6 +62,7 @@ const (
 const (
 	defaultFormat      = FormatTable
 	defaultMinSeverity = "info"
+	defaultTheme       = string(tui.ThemeAuto)
 	defaultProcRoot    = "/proc"
 	defaultDockerSock  = "/var/run/docker.sock"
 )
@@ -70,6 +75,7 @@ const (
 	usageDockerSocket = "path of the Docker Engine unix socket"
 	usageNoDocker     = "skip Docker container discovery"
 	usageInterval     = "auto-refresh interval of the tui, minimum 1s"
+	usageTheme        = "color theme of the tui: auto (detect the terminal background), dark or light"
 
 	usageExternal = "also scan this machine from the network side with nmap (TCP connect scan only, UDP is not scanned); " +
 		"by default only this host's own non-loopback IPv4 addresses are scanned; requires nmap to be installed"
@@ -102,12 +108,14 @@ Commands:
   help      show this help
 
 Run "exposedwatch tui -h" or "exposedwatch scan -h" for flags.
+The tui accepts --interval and --theme auto|dark|light.
 Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 `
 	versionFormat        = "exposedwatch %s"
 	scanFlagSetName      = "scan"
 	tuiFlagSetName       = "tui"
 	nonTerminalMessage   = "the tui command needs an interactive terminal (stdout is not a terminal); use \"exposedwatch scan\" for non-interactive output"
+	invalidThemeFmt      = "invalid --theme: %v"
 	invalidIntervalFmt   = "invalid --interval %v: must be at least %v"
 	tuiFailedFormat      = "tui failed: %v"
 	invalidFormatMessage = "invalid --format %q: want table or json"

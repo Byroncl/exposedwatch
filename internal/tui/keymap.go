@@ -18,6 +18,11 @@ const (
 	ActionCycleMinimumSeverity
 	ActionStartSearch
 	ActionToggleHelp
+	ActionNextTab
+	ActionPreviousTab
+	ActionShowFindings
+	ActionShowAllPorts
+	ActionShowChanges
 )
 
 // actionForKey maps a key press to an action when browsing the table.
@@ -43,6 +48,16 @@ func actionForKey(keyPress tea.KeyMsg) Action {
 		return ActionStartSearch
 	case keyHelp:
 		return ActionToggleHelp
+	case keyNextTab:
+		return ActionNextTab
+	case keyPreviousTab:
+		return ActionPreviousTab
+	case keyFindingsTab:
+		return ActionShowFindings
+	case keyAllPortsTab:
+		return ActionShowAllPorts
+	case keyChangesTab:
+		return ActionShowChanges
 	default:
 		return ActionNone
 	}

@@ -5,24 +5,29 @@ import "strings"
 // View renders the whole screen. It is pure: it only reads the model.
 func (model Model) View() string {
 	frame := model.computeLayout()
-	headerPart := append(model.headerLines(frame.width), model.warningViewLines(frame)...)
+	headerPart := append(model.headerLines(frame.width), model.tabLine(frame.width))
+	headerPart = append(headerPart, model.warningViewLines(frame)...)
 	var bodyPart []string
 	if model.viewState == ViewHelp {
-		bodyPart = model.helpLines(frame.width)
+		bodyPart = model.helpPanel(frame)
 	} else {
-		bodyPart = model.tableLines(frame)
+		bodyPart = model.tablePanel(frame)
 		if frame.showDetail {
-			bodyPart = append(bodyPart, model.detailLines(frame.width)...)
+			bodyPart = append(bodyPart, model.detailPanel(frame.width)...)
 		}
 	}
 	footerPart := []string{model.footerLine(frame.width)}
-	return strings.Join(fitLines(headerPart, bodyPart, footerPart, frame.height), "\n")
+	fitted := fitLines(headerPart, bodyPart, footerPart, frame.height)
+	for index, line := range fitted {
+		fitted[index] = clampWidth(line, frame.width)
+	}
+	return strings.Join(fitted, "\n")
 }
 
 func (model Model) warningViewLines(frame layout) []string {
 	lines := make([]string, 0, len(frame.warnings))
 	for _, warning := range frame.warnings {
-		lines = append(lines, model.styles.warning.MaxWidth(frame.width).Render(warning))
+		lines = append(lines, model.styles.warning.Render(clampWidth(warning, frame.width)))
 	}
 	return lines
 }

@@ -18,81 +18,43 @@ const (
 	fallbackHeight = 24
 )
 
-// Layout.
+// Change tracking.
 const (
-	headerLineCount      = 2
-	footerLineCount      = 1
-	tableHeaderLineCount = 1
-	detailPaneHeight     = 6
-	minTableRowsToShow   = 3
-	maxWarningLines      = 3
-	columnSeparator      = " "
-	minTitleColumnWidth  = 10
-	scrollOffsetFloor    = 0
+	// newBadgeRefreshCount is how many consecutive successful snapshots, the
+	// one that detected the port included, an opened port keeps its NEW badge.
+	newBadgeRefreshCount = 5
+	// maxChangeLogEntries bounds the change log; the oldest entries are dropped.
+	maxChangeLogEntries = 200
 )
 
-// Table column widths and the terminal width from which each column shows.
+// Sort mode names.
 const (
-	severityColumnWidth = 8
-	portColumnWidth     = 6
-	protocolColumnWidth = 5
-	bindColumnWidth     = 16
-	exposureColumnWidth = 14
-	sourceColumnWidth   = 7
-	processColumnWidth  = 20
-
-	showProtocolFromWidth = 50
-	showProcessFromWidth  = 70
-	showBindFromWidth     = 85
-	showExposureFromWidth = 100
-	showSourceFromWidth   = 110
+	sortModeNameSeverity = "severity"
+	sortModeNamePort     = "port"
+	sortModeNameProcess  = "process"
+	sortModeNameUnknown  = "unknown"
 )
 
-// Table headings.
+// Theme names accepted by --theme.
 const (
-	headingSeverity = "SEVERITY"
-	headingPort     = "PORT"
-	headingProtocol = "PROTO"
-	headingBind     = "BIND"
-	headingExposure = "EXPOSURE"
-	headingSource   = "SOURCE"
-	headingProcess  = "PROCESS/CONTAINER"
-	headingTitle    = "TITLE"
+	themeNameAuto    = "auto"
+	themeNameDark    = "dark"
+	themeNameLight   = "light"
+	unknownThemeText = "unknown theme %q: want auto, dark or light"
 )
 
-// User-facing strings.
+// Tab titles.
 const (
-	appTitle              = "exposedwatch"
-	titleFormat           = " %s %s"
-	updatedFormat         = "  updated %s"
-	updatedPlaceholder    = "--:--:--"
-	refreshingIndicator   = "  refreshing..."
-	timeLayout            = "15:04:05"
-	portsCountFormat      = " ports %d"
-	severityCountFormat   = "%s %d"
-	countSeparator        = "  "
-	scanningMessage       = "Scanning..."
-	noMatchMessage        = "No findings match the current filters."
-	noFindingsMessage     = "No findings."
-	emptyValue            = "-"
-	sourceWarningFormat   = "! %s"
-	refreshWarningFormat  = "! refresh failed: %v"
-	moreWarningsFormat    = "! ... and %d more warnings"
-	processContainerJoin  = " / "
-	filterPromptFormat    = "/%s%s  (enter apply, esc cancel)"
-	filterCursor          = "_"
-	statusFormat          = "  [sort:%s min:%s filter:%q]"
-	statusFormatNoFilter  = "  [sort:%s min:%s]"
-	detailRuleFormat      = "Rule: %s   Severity: %s   Source: %s"
-	detailWhereFormat     = "Where: %s   Exposure: %s   Process/Container: %s"
-	detailFixFormat       = "Fix: %s"
-	detailEmptyMessage    = "Select a finding to see details."
-	detailSeparatorGlyph  = "-"
-	helpTitle             = "Keys"
-	helpCloseHint         = "Press ? or esc to close."
-	helpKeyDescriptionFmt = "%-12s %s"
-	sortModeNameSeverity  = "severity"
-	sortModeNamePort      = "port"
-	sortModeNameProcess   = "process"
-	sortModeNameUnknown   = "unknown"
+	tabTitleFindings = "Findings"
+	tabTitleAllPorts = "All ports"
+	tabTitleChanges  = "Changes"
+)
+
+// Risk level words shown next to the gauge.
+const (
+	riskWordSafe     = "SAFE"
+	riskWordLow      = "LOW"
+	riskWordMedium   = "MEDIUM"
+	riskWordHigh     = "HIGH"
+	riskWordCritical = "CRITICAL"
 )

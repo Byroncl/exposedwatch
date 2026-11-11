@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Byroncl/exposedwatch/internal/tui"
 )
 
 func TestTuiRefusesWhenStdoutIsNotATerminal(testRun *testing.T) {
@@ -48,5 +50,36 @@ func TestUsageMentionsTuiCommand(testRun *testing.T) {
 	_, _, stderr := runCommand()
 	if !strings.Contains(stderr, "tui") {
 		testRun.Fatalf("usage lacks tui: %q", stderr)
+	}
+}
+
+func TestParseTuiOptionsThemeDefaultsToAuto(testRun *testing.T) {
+	options, err := parseTuiOptions(nil, &strings.Builder{})
+	if err != nil || options.Theme != tui.ThemeAuto {
+		testRun.Fatalf("options=%+v err=%v", options, err)
+	}
+}
+
+func TestParseTuiOptionsAcceptsEveryTheme(testRun *testing.T) {
+	cases := map[string]tui.Theme{"auto": tui.ThemeAuto, "dark": tui.ThemeDark, "light": tui.ThemeLight}
+	for name, want := range cases {
+		options, err := parseTuiOptions([]string{"--theme", name}, &strings.Builder{})
+		if err != nil || options.Theme != want {
+			testRun.Errorf("--theme %s: options=%+v err=%v", name, options, err)
+		}
+	}
+}
+
+func TestTuiRejectsUnknownTheme(testRun *testing.T) {
+	code, _, stderr := runCommand("tui", "--theme", "neon")
+	if code != ExitUsage || !strings.Contains(stderr, "--theme") || !strings.Contains(stderr, "neon") {
+		testRun.Fatalf("code=%d stderr=%q", code, stderr)
+	}
+}
+
+func TestUsageMentionsThemeFlag(testRun *testing.T) {
+	_, stdout, _ := runCommand("help")
+	if !strings.Contains(stdout, "--theme") {
+		testRun.Fatalf("usage lacks --theme: %q", stdout)
 	}
 }

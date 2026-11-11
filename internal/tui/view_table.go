@@ -1,114 +1,113 @@
 package tui
 
 import (
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-
-	"github.com/Byroncl/exposedwatch/internal/domain"
 )
 
-// column is one table column and the terminal width from which it shows.
-type column struct {
-	heading   string
-	width     int
-	fromWidth int
-	value     func(finding domain.Finding) string
+// renderCell draws one cell padded to exactly width cells.
+func (palette styles) renderCell(content cell, width int, selected bool) string {
+	look := content.look
+	if selected {
+		look = look.Background(colorSelected)
+	}
+	if !content.chip {
+		return look.Render(fitWidth(content.text, width))
+	}
+	label := clampWidth(strings.Repeat(columnSeparator, chipSidePadding)+content.text+strings.Repeat(columnSeparator, chipSidePadding), width)
+	gap := strings.Repeat(" ", max(width-lipgloss.Width(label), 0))
+	return look.Render(label) + palette.rowGap(selected).Render(gap)
 }
 
-var tableColumns = []column{
-	{headingSeverity, severityColumnWidth, 0, func(finding domain.Finding) string { return finding.Severity.String() }},
-	{headingPort, portColumnWidth, 0, func(finding domain.Finding) string { return strconv.Itoa(finding.Port.Number) }},
-	{headingProtocol, protocolColumnWidth, showProtocolFromWidth, func(finding domain.Finding) string { return string(finding.Port.Protocol) }},
-	{headingBind, bindColumnWidth, showBindFromWidth, func(finding domain.Finding) string { return finding.Port.BindAddress }},
-	{headingExposure, exposureColumnWidth, showExposureFromWidth, func(finding domain.Finding) string { return finding.Port.Exposure().String() }},
-	{headingSource, sourceColumnWidth, showSourceFromWidth, func(finding domain.Finding) string { return string(finding.Port.Source) }},
-	{headingProcess, processColumnWidth, showProcessFromWidth, func(finding domain.Finding) string { return processOrContainer(finding.Port) }},
+// rowGap styles the spaces between cells.
+func (palette styles) rowGap(selected bool) lipgloss.Style {
+	if selected {
+		return palette.selected
+	}
+	return palette.plain
 }
 
-func visibleColumns(width int) []column {
-	shown := make([]column, 0, len(tableColumns))
-	for _, candidate := range tableColumns {
-		if width >= candidate.fromWidth {
-			shown = append(shown, candidate)
-		}
+// tableContent returns the heading and the visible rows, padded to the table
+// height so the detail panel keeps its place.
+func (model Model) tableContent(frame layout) []string {
+	contentWidth := panelContentWidth(frame.width)
+	spec := tableSpecFor(model.activeTab)
+	shown, flexWidth := spec.layoutColumns(contentWidth)
+	lines := []string{model.tableHeadingLine(spec, shown, flexWidth)}
+	if len(model.visibleRows) == 0 {
+		lines = append(lines, model.styles.dim.Render(model.emptyMessage()))
 	}
-	return shown
-}
-
-func titleColumnWidth(width int, shown []column) int {
-	used := 0
-	for _, candidate := range shown {
-		used += candidate.width + len(columnSeparator)
-	}
-	remaining := width - used
-	if remaining < minTitleColumnWidth {
-		return minTitleColumnWidth
-	}
-	return remaining
-}
-
-// fixedCell pads or truncates text to exactly width cells.
-func fixedCell(text string, width int) string {
-	return lipgloss.NewStyle().Inline(true).Width(width).MaxWidth(width).Render(text)
-}
-
-func (model Model) tableLines(frame layout) []string {
-	if frame.tableRows < 0 {
-		return nil
-	}
-	shown := visibleColumns(frame.width)
-	titleWidth := titleColumnWidth(frame.width, shown)
-	lines := []string{model.tableHeadingLine(shown, titleWidth, frame.width)}
-	if len(model.visibleFindings) == 0 {
-		return append(lines, model.emptyMessageLine(frame.width))
-	}
-	end := model.scrollOffset + frame.tableRows
-	if end > len(model.visibleFindings) {
-		end = len(model.visibleFindings)
-	}
+	end := min(model.scrollOffset+frame.tableRows, len(model.visibleRows))
 	for index := model.scrollOffset; index < end; index++ {
-		lines = append(lines, model.tableRowLine(index, shown, titleWidth, frame.width))
+		lines = append(lines, model.tableRowLine(index, spec, shown, flexWidth))
 	}
-	return lines
+	missing := tableHeadingLines + frame.tableRows - len(lines)
+	return append(lines, blankLines(missing, contentWidth)...)
 }
 
-func (model Model) emptyMessageLine(width int) string {
-	message := noMatchMessage
+func (model Model) emptyMessage() string {
 	switch {
 	case !model.hasReport:
-		message = scanningMessage
-	case len(model.report.Findings) == 0:
-		message = noFindingsMessage
+		return scanningMessage
+	case model.activeTab == TabChanges:
+		return noChangesMessage
+	case model.activeTab == TabFindings && len(model.report.Findings) == 0:
+		return noFindingsMessage
+	case model.activeTab == TabAllPorts && len(model.report.Ports) == 0:
+		return noPortsMessage
+	default:
+		return noMatchMessage
 	}
-	return model.styles.dim.MaxWidth(width).Render(message)
 }
 
-func (model Model) tableHeadingLine(shown []column, titleWidth, width int) string {
+func (model Model) tableHeadingLine(spec tableSpec, shown []column, flexWidth int) string {
 	cells := make([]string, 0, len(shown)+1)
 	for _, candidate := range shown {
-		cells = append(cells, fixedCell(candidate.heading, candidate.width))
+		cells = append(cells, fitWidth(strings.Repeat(columnSeparator, candidate.headingIndent)+candidate.heading, candidate.width))
 	}
-	cells = append(cells, fixedCell(headingTitle, titleWidth))
-	return model.styles.heading.MaxWidth(width).Render(strings.Join(cells, columnSeparator))
+	cells = append(cells, fitWidth(spec.flexHeading, flexWidth))
+	leading := noSelectionMark + columnSeparator
+	return model.styles.heading.Render(leading + strings.Join(cells, columnSeparator))
 }
 
-func (model Model) tableRowLine(index int, shown []column, titleWidth, width int) string {
-	finding := model.visibleFindings[index]
+func (model Model) tableRowLine(index int, spec tableSpec, shown []column, flexWidth int) string {
+	row := model.visibleRows[index]
 	selected := index == model.cursor
-	cells := make([]string, 0, len(shown)+1)
-	for position, candidate := range shown {
-		cell := fixedCell(candidate.value(finding), candidate.width)
-		if position == 0 && !selected {
-			cell = model.styles.forSeverity(finding.Severity).Render(cell)
-		}
-		cells = append(cells, cell)
-	}
-	cells = append(cells, fixedCell(finding.Title, titleWidth))
-	line := strings.Join(cells, columnSeparator)
+	gap := model.styles.rowGap(selected).Render(columnSeparator)
+	mark := model.styles.plain.Render(noSelectionMark)
 	if selected {
-		return model.styles.selected.MaxWidth(width).Render(line)
+		mark = model.styles.title.Background(colorSelected).Render(selectionMark)
 	}
-	return model.styles.plain.MaxWidth(width).Render(line)
+	var builder strings.Builder
+	builder.WriteString(mark)
+	builder.WriteString(gap)
+	for _, candidate := range shown {
+		builder.WriteString(model.styles.renderCell(candidate.content(model.styles, row), candidate.width, selected))
+		builder.WriteString(gap)
+	}
+	builder.WriteString(model.styles.renderCell(spec.flexContent(model.styles, row), flexWidth, selected))
+	return builder.String()
+}
+
+// tablePanel wraps the table in a titled rounded border.
+func (model Model) tablePanel(frame layout) []string {
+	return model.styles.renderPanel(model.tablePanelTitle(), model.tableContent(frame), frame.width)
+}
+
+// tablePanelTitle shows the tab, the cursor position and the active view options.
+func (model Model) tablePanelTitle() string {
+	position := fmt.Sprintf(panelPositionEmpty, model.activeTab.Title())
+	if len(model.visibleRows) > 0 {
+		position = fmt.Sprintf(panelPositionFormat, model.activeTab.Title(), model.cursor+1, len(model.visibleRows))
+	}
+	if !model.activeTab.supportsFiltering() {
+		return position + panelChangesNote + columnSeparator
+	}
+	status := fmt.Sprintf(panelStatusFormat, model.sortMode, model.minSeverity)
+	if model.filterText != "" {
+		status += fmt.Sprintf(panelFilterFormat, model.filterText)
+	}
+	return position + status + columnSeparator
 }

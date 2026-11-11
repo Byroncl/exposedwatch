@@ -2,11 +2,12 @@ package tui
 
 import "fmt"
 
-func (model Model) helpLines(width int) []string {
-	lines := []string{model.styles.heading.Render(helpTitle)}
+// helpPanel lists every key and the meaning of the header counters.
+func (model Model) helpPanel(frame layout) []string {
+	lines := make([]string, 0, len(keyBindings)+2)
 	for _, binding := range keyBindings {
-		lines = append(lines, model.styles.plain.MaxWidth(width).Render(
-			fmt.Sprintf(helpKeyDescriptionFmt, binding.Keys, binding.Description)))
+		lines = append(lines, fmt.Sprintf(helpKeyDescriptionFmt, binding.Keys, binding.Description))
 	}
-	return append(lines, model.styles.dim.MaxWidth(width).Render(helpCloseHint))
+	lines = append(lines, model.styles.dim.Render(helpCountersNote), model.styles.dim.Render(helpCloseHint))
+	return model.styles.renderPanel(panelHelpTitle, lines, frame.width)
 }

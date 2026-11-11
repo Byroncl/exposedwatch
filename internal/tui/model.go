@@ -14,6 +14,8 @@ type Options struct {
 	Scanner  Scanner
 	Interval time.Duration
 	Version  string
+	// Theme selects the palette adaptation; the zero value means ThemeAuto.
+	Theme Theme
 	// Clock returns the current time; defaults to time.Now.
 	Clock func() time.Time
 }
@@ -33,10 +35,12 @@ type Model struct {
 	lastRefresh time.Time
 	refreshing  bool
 	refreshErr  error
+	tracker     changeTracker
 
-	visibleFindings []domain.Finding
-	cursor          int
-	scrollOffset    int
+	activeTab    TabID
+	visibleRows  []displayRow
+	cursor       int
+	scrollOffset int
 
 	sortMode    SortMode
 	minSeverity domain.Severity
@@ -63,6 +67,7 @@ func New(options Options) Model {
 		version:    options.Version,
 		clock:      clock,
 		refreshing: true,
+		tracker:    newChangeTracker(),
 		styles:     newStyles(),
 	}
 }

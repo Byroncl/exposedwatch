@@ -38,20 +38,26 @@ func (model Model) warningLines() []string {
 	return lines
 }
 
-// computeLayout decides how many rows the table and detail pane get.
+// computeLayout decides how many rows the table and the detail panel get.
 func (model Model) computeLayout() layout {
 	width, height := model.effectiveSize()
 	warnings := model.warningLines()
-	fixedLines := headerLineCount + len(warnings) + footerLineCount + tableHeaderLineCount
-	showDetail := height-fixedLines-detailPaneHeight >= minTableRowsToShow
-	tableRows := height - fixedLines
+	fixedLines := headerLineCount + tabLineCount + len(warnings) + footerLineCount
+	bodyLines := height - fixedLines
+	tableChrome := panelBorderLineCount + tableHeadingLines
+	detailOuter := detailContentLines + panelBorderLineCount
+	showDetail := bodyLines-detailOuter-tableChrome >= minTableRowsToShow
+	tableOuter := bodyLines
 	if showDetail {
-		tableRows -= detailPaneHeight
+		tableOuter -= detailOuter
 	}
-	if tableRows < 0 {
-		tableRows = 0
+	return layout{
+		width:      width,
+		height:     height,
+		warnings:   warnings,
+		showDetail: showDetail,
+		tableRows:  max(tableOuter-tableChrome, 0),
 	}
-	return layout{width: width, height: height, warnings: warnings, showDetail: showDetail, tableRows: tableRows}
 }
 
 // fitLines keeps the footer first, then the header, then the body.
