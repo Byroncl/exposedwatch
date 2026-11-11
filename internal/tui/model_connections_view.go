@@ -29,9 +29,9 @@ func loopbackHintText(model Model) string {
 }
 
 // connectionWarningLines lists the non-fatal connection problems. They only
-// show on the Connections tab, where they matter.
+// show on the connection views, where they matter.
 func (model Model) connectionWarningLines() []string {
-	if model.activeTab != TabConnections || !model.connectionsEnabled() {
+	if !model.activeTab.usesConnections() || !model.connectionsEnabled() {
 		return nil
 	}
 	var lines []string

@@ -55,39 +55,53 @@ Severities: `info`, `low`, `medium`, `high`, `critical`.
 sudo exposedwatch                      # refreshes every 2s
 sudo exposedwatch --interval 5s        # custom refresh interval (minimum 1s)
 sudo exposedwatch --no-docker          # skip Docker discovery
-sudo exposedwatch --no-connections     # disable the Connections tab
+sudo exposedwatch --no-connections     # disable the Connections module
 sudo exposedwatch --theme light        # force the palette for light terminals
 ```
 
 Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--theme auto|dark|light` (default `auto`, which detects the terminal background). It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
 
-The header shows the severity counts, an overall risk gauge (`SAFE`, `LOW`, `MEDIUM`, `HIGH` or `CRITICAL`, driven by the highest severity present), the number of ports per source and the `+N new -M closed` counters. The header also shows `conn N (in X / out Y)` when the width allows it. Four tabs share the screen:
+The header shows the severity counts, an overall risk gauge (`SAFE`, `LOW`, `MEDIUM`, `HIGH` or `CRITICAL`, driven by the highest severity present), the number of ports per source and the `+N new -M closed` counters. The header also shows `conn N (in X / out Y)` when the width allows it. On the Overview the header is just the title, because the Overview shows those numbers itself.
 
-- **Findings** (`1`): one row per finding.
-- **All ports** (`2`): every port, with its severity or `-` when no rule matched.
-- **Changes** (`3`): a log of ports that opened or closed since the view started, newest first (the last 200 entries are kept).
-- **Connections** (`4`): who is connected to this server right now (see below).
+The screen has a sidebar of modules on the left and, on the right, the tabs of the current module followed by its view:
+
+| Module | Tabs (`1`, `2`, ...) | What it shows |
+| ------ | -------------------- | ------------- |
+| Overview | Summary | Overall risk gauge, severity counts, counters, the 5 worst findings, the last 5 changes and the top 3 remote addresses (inbound, only when connections are enabled) |
+| Ports | Findings, All ports, Changes | `Findings`: one row per finding. `All ports`: every port, with its severity or `-` when no rule matched. `Changes`: a log of ports that opened or closed since the view started, newest first (the last 200 entries are kept) |
+| Connections | Live, Top remote | `Live`: who is connected to this server right now (see below). `Top remote`: the busiest inbound remote addresses and the inbound count per local port, full size |
+| Firewall | - | Not available yet (placeholder) |
+| Alerts | - | Not available yet (placeholder) |
+| Settings | - | Not available yet (placeholder); it only shows the current theme, refresh interval and whether connections are enabled, read-only |
+
+The view starts on Ports, Findings. Each module remembers the tab you last used in it. Firewall, Alerts and Settings only say what they are planned to do; nothing in them works yet.
+
+The sidebar adapts to the terminal width: full (module names with a count or flag, for example the number of findings and `NEW` on Ports, the connection count on Connections, `off` on Alerts) from 80 columns, compact (one letter per module) from 50 to 79 columns, and hidden below 50. `b` hides or shows it on top of that. Nothing is drawn outside the terminal at any size.
 
 The first successful scan is the baseline: nothing is flagged. After each later refresh, ports that opened get a `NEW` badge for 5 refreshes and a log entry; ports that closed get a log entry with their last known severity. `+N new -M closed` counts these events since the view started. A refresh that fails, or a source that fails during a refresh, never produces `closed` events: the previous data of that source is kept. The log lives only in memory and is lost when the view exits. A detail panel shows the rule, recommendation, bind address, process or container and when this session first saw the selected port.
 
 | Key | Action |
 | --- | ------ |
-| `tab` / `shift+tab` | Next / previous tab |
-| `1` / `2` / `3` / `4` | Jump to Findings / All ports / Changes / Connections |
-| `up` / `k`, `down` / `j` | Move selection |
-| `g` / `G` | Jump to top / bottom |
+| `tab` / `shift+tab` | Next / previous module |
+| `]` / `[` | Next / previous tab of the current module |
+| `1` to `9` | Jump to that tab of the current module (Ports: Findings / All ports / Changes; Connections: Live / Top remote) |
+| `b` | Show or hide the sidebar |
+| `up` / `k`, `down` / `j` | Move selection (tables) |
+| `g` / `G` | Jump to top / bottom (tables) |
 | `r` | Refresh now |
-| `s` | Cycle sort: severity, port, process (Findings and All ports); direction, local port, remote address, process, age (Connections) |
-| `f` | Cycle minimum severity filter (Findings and All ports; ignored on Connections) |
-| `/` | Free-text filter (`enter` applies, `esc` cancels; on Connections it matches remote address, remote port and process) |
-| `l` | Show or hide loopback-to-loopback connections (Connections; hidden by default) |
-| `i` | Show only inbound connections, or all of them (Connections; all shown by default) |
+| `s` | Cycle sort: severity, port, process (Findings and All ports); direction, local port, remote address, process, age (Connections / Live) |
+| `f` | Cycle minimum severity filter (Findings and All ports only) |
+| `/` | Free-text filter (`enter` applies, `esc` cancels; on Connections / Live it matches remote address, remote port and process) |
+| `l` | Show or hide loopback-to-loopback connections (Connections: Live and Top remote; hidden by default) |
+| `i` | Show only inbound connections, or all of them (Connections: Live and Top remote; all shown by default) |
 | `?` | Toggle help |
 | `q` / `ctrl+c` | Quit |
 
-### Connections tab
+Keys that do not apply to the current tab are ignored and their hints are not shown in the footer. When the footer is too narrow, the least important hints are dropped first.
 
-The Connections tab lists the established TCP connections of this host, read from `/proc/net/tcp` and `/proc/net/tcp6` on every refresh. Each row shows the direction (`IN` when the local port is one this host listens on, `OUT` otherwise), the local port (and bind address when there is room), the remote `address:port`, the state, the process (`-` when unknown) and the age: how long this session has been seeing that connection (`12s`, `4m`, `1h`, `2d`). Inbound connections that appeared since the previous refresh get a `NEW` badge for 5 refreshes; the first read is the baseline and flags nothing. Rows are ordered inbound first, then by local port and remote address.
+### Connections module (Live tab)
+
+The Live tab of the Connections module lists the established TCP connections of this host, read from `/proc/net/tcp` and `/proc/net/tcp6` on every refresh. Each row shows the direction (`IN` when the local port is one this host listens on, `OUT` otherwise), the local port (and bind address when there is room), the remote `address:port`, the state, the process (`-` when unknown) and the age: how long this session has been seeing that connection (`12s`, `4m`, `1h`, `2d`). Inbound connections that appeared since the previous refresh get a `NEW` badge for 5 refreshes; the first read is the baseline and flags nothing. Rows are ordered inbound first, then by local port and remote address.
 
 Loopback-to-loopback connections (local services talking to each other) are hidden by default because they are noise; press `l` to show them. The title and the footer say whether they are hidden. Below the table, two panels list the busiest remote addresses and the inbound connection count per local port, computed from the same connections as the table (so they follow `l` and `i`). A failed read keeps the previous rows and shows a warning line, and it never delays the port scan, which refreshes independently. If the number of connections reaches the reader's limit, a notice shows how many were read.
 

@@ -12,9 +12,9 @@ func newQuietPortModel(testRun *testing.T) Model {
 	return refreshWith(testRun, newTestModel(testRun), sampleReportWithQuietPort(), 0)
 }
 
-func TestNumberKeysJumpToTabs(testRun *testing.T) {
+func TestNumberKeysJumpToInnerTabsOfTheModule(testRun *testing.T) {
 	model := newTestModel(testRun)
-	for key, want := range map[string]TabID{"2": TabAllPorts, "3": TabChanges, "4": TabConnections, "1": TabFindings} {
+	for key, want := range map[string]TabID{"2": TabAllPorts, "3": TabChanges, "1": TabFindings} {
 		model = typeKeys(testRun, model, key)
 		if model.activeTab != want {
 			testRun.Fatalf("key %s: tab = %v, want %v", key, model.activeTab, want)
@@ -22,19 +22,19 @@ func TestNumberKeysJumpToTabs(testRun *testing.T) {
 	}
 }
 
-func TestTabKeysCycleBothWays(testRun *testing.T) {
+func TestInnerTabKeysCycleBothWays(testRun *testing.T) {
 	model := newTestModel(testRun)
-	model = typeKeys(testRun, model, "tab")
+	model = typeKeys(testRun, model, "]")
 	if model.activeTab != TabAllPorts {
-		testRun.Fatalf("tab -> %v", model.activeTab)
+		testRun.Fatalf("] -> %v", model.activeTab)
 	}
-	model = typeKeys(testRun, model, "tab", "tab", "tab")
+	model = typeKeys(testRun, model, "]", "]")
 	if model.activeTab != TabFindings {
 		testRun.Fatalf("wrapped -> %v", model.activeTab)
 	}
-	model = typeKeys(testRun, model, "shift+tab", "shift+tab")
-	if model.activeTab != TabChanges {
-		testRun.Fatalf("shift+tab -> %v", model.activeTab)
+	model = typeKeys(testRun, model, "[", "[")
+	if model.activeTab != TabAllPorts {
+		testRun.Fatalf("[ [ -> %v", model.activeTab)
 	}
 }
 
@@ -132,7 +132,7 @@ func TestFooterHintsDifferPerTab(testRun *testing.T) {
 func TestHelpListsTheNewKeys(testRun *testing.T) {
 	model := typeKeys(testRun, newTestModel(testRun), "?")
 	rendered := model.View()
-	for _, expected := range []string{"tab", "shift+tab", "1 / 2 / 3"} {
+	for _, expected := range []string{"tab", "shift+tab", "] / [", "1-9", "sidebar"} {
 		if !strings.Contains(rendered, expected) {
 			testRun.Errorf("help lacks %q:\n%s", expected, rendered)
 		}

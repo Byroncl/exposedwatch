@@ -5,16 +5,12 @@ import "strings"
 // View renders the whole screen. It is pure: it only reads the model.
 func (model Model) View() string {
 	frame := model.computeLayout()
-	headerPart := append(model.headerLines(frame.width), model.tabLine(frame.width))
-	headerPart = append(headerPart, model.warningViewLines(frame)...)
+	headerPart := append(model.headerLines(frame.width), model.warningViewLines(frame)...)
 	var bodyPart []string
 	if model.viewState == ViewHelp {
 		bodyPart = model.helpPanel(frame)
 	} else {
-		bodyPart = model.tablePanel(frame)
-		if frame.showDetail {
-			bodyPart = append(bodyPart, model.bottomPanels(frame.width)...)
-		}
+		bodyPart = model.workArea(frame)
 	}
 	footerPart := []string{model.footerLine(frame.width)}
 	fitted := fitLines(headerPart, bodyPart, footerPart, frame.height)

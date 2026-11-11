@@ -55,7 +55,14 @@ type Model struct {
 	connectionSortMode     ConnectionSortMode
 	connectionFilterText   string
 
-	activeTab    TabID
+	// activeModule and innerTabs (the remembered inner tab of every module)
+	// choose activeTab, the view the content area shows.
+	activeModule  Module
+	innerTabs     [moduleCount]InnerTab
+	activeTab     TabID
+	sidebarHidden bool
+	theme         Theme
+
 	visibleRows  []displayRow
 	cursor       int
 	scrollOffset int
@@ -79,14 +86,21 @@ func New(options Options) Model {
 	if interval < MinimumInterval {
 		interval = DefaultInterval
 	}
+	theme := options.Theme
+	if theme == "" {
+		theme = ThemeAuto
+	}
 	return Model{
-		scanner:    options.Scanner,
-		interval:   interval,
-		version:    options.Version,
-		clock:      clock,
-		refreshing: true,
-		tracker:    newChangeTracker(),
-		styles:     newStyles(),
+		scanner:      options.Scanner,
+		theme:        theme,
+		activeModule: ModulePorts,
+		activeTab:    TabFindings,
+		interval:     interval,
+		version:      options.Version,
+		clock:        clock,
+		refreshing:   true,
+		tracker:      newChangeTracker(),
+		styles:       newStyles(),
 
 		connections:           options.Connections,
 		connectionsRefreshing: options.Connections != nil,
