@@ -1,0 +1,6 @@
+table ip filter
+table ip nat
+table ip6 filter
+table ip my_custom_rules
+table bridge isolation
+table inet firewalld

@@ -6,3 +6,6 @@ const (
 	allSourcesFailedMessage = "app: every port source failed"
 	sourceErrorFormat       = "%s: %v"
 )
+
+// Firewall error messages.
+const noFirewallSourceMessage = "app: no firewall rule source configured"
