@@ -1,0 +1,38 @@
+# Markdown: ignore all except the public README
+*.md
+!README.md
+
+# Internal workflow and tooling
+odd/
+.atl/
+.claude/
+.engram/
+CLAUDE.md
+AGENTS.md
+
+# Go build output
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Local data and secrets
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+data/
+*.pem
+*.key
+
+# Frontend tooling (if used)
+node_modules/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
