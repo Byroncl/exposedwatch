@@ -1,5 +1,7 @@
 package main
 
+import "github.com/Byroncl/exposedwatch/internal/adapters/nmapscan"
+
 // ExitCode is the process exit status.
 type ExitCode int
 
@@ -43,6 +45,13 @@ const (
 	flagDockerSocket = "docker-socket"
 	flagNoDocker     = "no-docker"
 	flagInterval     = "interval"
+
+	flagExternal         = "external"
+	flagExternalTarget   = "external-target"
+	flagConfirmOwnership = "confirm-ownership"
+	flagExternalPorts    = "external-ports"
+	flagExternalTimeout  = "external-timeout"
+	flagNmapPath         = "nmap-path"
 )
 
 // Flag defaults.
@@ -61,7 +70,20 @@ const (
 	usageDockerSocket = "path of the Docker Engine unix socket"
 	usageNoDocker     = "skip Docker container discovery"
 	usageInterval     = "auto-refresh interval of the tui, minimum 1s"
+
+	usageExternal = "also scan this machine from the network side with nmap (TCP connect scan only, UDP is not scanned); " +
+		"by default only this host's own non-loopback IPv4 addresses are scanned; requires nmap to be installed"
+	usageExternalTarget = "additional nmap target: IP, CIDR (IPv4 /24 or narrower) or hostname; comma separated or repeatable; " +
+		"requires --external and --confirm-ownership"
+	usageConfirmOwnership = "confirm that you own, or have permission to scan, every --external-target; " +
+		"scanning systems you do not own or have no permission to scan may be illegal"
+	usageExternalPorts   = "ports for the external scan, e.g. 22,80,443,8000-8100 (default: nmap's top 1000 TCP ports)"
+	usageExternalTimeout = "time limit of the external scan, between 5s and 30m"
+	usageNmapPath        = "path or name of the nmap executable"
 )
+
+// Flag defaults for the external scan.
+const defaultNmapPath = nmapscan.BinaryName
 
 // Environment variables.
 const envNoColor = "NO_COLOR"
@@ -74,7 +96,8 @@ Run without a command to open the interactive view (same as "tui").
 
 Commands:
   tui       interactive full-screen view that refreshes automatically (default)
-  scan      one-shot report for scripts and cron (table or JSON)
+  scan      one-shot report for scripts and cron (table or JSON);
+            add --external to also scan from the network side with nmap
   version   print the version
   help      show this help
 
@@ -92,4 +115,12 @@ Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 	unexpectedArgsFmt    = "unexpected arguments: %v"
 	scanFailedFormat     = "scan failed: %v"
 	renderFailedFormat   = "rendering failed: %v"
+
+	externalTargetNeedsExternalMessage = "--external-target requires --external"
+	externalTargetNeedsConfirmMessage  = "--external-target requires --confirm-ownership: confirm that you own, " +
+		"or have permission to scan, the targets (scanning systems you do not own may be illegal)"
+	invalidExternalTargetFmt  = "invalid --external-target: %v"
+	invalidExternalPortsFmt   = "invalid --external-ports: %v"
+	invalidExternalTimeoutFmt = "invalid --external-timeout: %v"
+	listSeparator             = ","
 )

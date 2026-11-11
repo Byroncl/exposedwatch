@@ -49,6 +49,8 @@ nfpms:
     section: utils
     priority: optional
     bindir: /usr/bin
+    recommends:
+      - nmap
     contents:
       - src: LICENSE
         dst: /usr/share/doc/exposedwatch/LICENSE

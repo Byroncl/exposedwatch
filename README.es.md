@@ -108,6 +108,20 @@ Ejemplo para cron o CI: hacer fallar el trabajo si hay algo de severidad medium 
 exposedwatch scan --min-severity medium --format json > exposure.json || echo "exposure check exited with $?"
 ```
 
+## Escaneo externo (nmap)
+
+`--external` también escanea esta máquina desde el lado de la red con [nmap](https://nmap.org) e informa lo que encuentra con la fuente `external`, combinado con los resultados del host y de Docker y evaluado con las mismas reglas de riesgo. Está desactivado por defecto.
+
+```sh
+sudo apt install nmap
+sudo exposedwatch scan --external
+```
+
+- Objetivos por defecto: las direcciones IPv4 propias de este host que no sean de loopback ni de enlace local. No se escanea nada más a menos que lo indiques.
+- Otros objetivos (`--external-target`; separados por comas o repetibles) deben ser direcciones IPv4, CIDR IPv4 (`/24` o más estrecho) o nombres de host. Los objetivos IPv6 aún no están soportados. Requieren `--confirm-ownership`. **Escanear sistemas que no son tuyos o sin permiso para hacerlo puede ser ilegal.**
+- Solo escaneo TCP connect (`-sT`); no se escanea UDP. Usa `--external-ports 22,80,443,8000-8100` para elegir puertos (por defecto: los 1000 más comunes de nmap) y `--external-timeout` para limitar la duración (2m por defecto).
+- nmap debe estar instalado (el `.deb` solo lo recomienda). Si falta, la fuente externa se informa como error y los resultados del host y de Docker se muestran igualmente.
+
 ## Instalación
 
 ### Ubuntu/Debian (`.deb`, recomendado)
@@ -145,14 +159,8 @@ sudo apt remove exposedwatch
 
 - Ejecuta con `sudo` para poder resolver los nombres de proceso; sin él, los puertos se listan igualmente, pero la columna de proceso puede aparecer vacía.
 - El descubrimiento de Docker lee el socket de Docker (`/var/run/docker.sock` por defecto, se cambia con `--docker-socket`). Tu usuario necesita acceso a él; de lo contrario, Docker se informa como una fuente que no se pudo leer.
-- Solo lectura: lee `/proc` y envía una única solicitud `GET` al socket de Docker para listar los contenedores. No abre ni modifica puertos, ni modifica contenedores.
-
-## Hoja de ruta
-
-Planificado, **aún no disponible**:
-
-- Escaneo externo con nmap
-- Repositorio apt firmado
+- Solo lectura: lee `/proc` y envía una única solicitud `GET` al socket de Docker para listar los contenedores. No abre ni modifica puertos, ni modifica contenedores. Con `--external`, nmap además abre conexiones TCP hacia los objetivos escaneados.
+- `--nmap-path` ejecuta el binario indicado con los mismos privilegios que exposedwatch, por lo que no permitas que usuarios no confiables pasen argumentos a `sudo exposedwatch` mediante reglas de sudoers.
 
 ## Licencia
 

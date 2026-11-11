@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap" version="7.94">
+<host><status state="up" reason="user-set"/>
+<address addr="AA:BB:CC:DD:EE:FF" addrtype="mac"/>
+<address addr="10.0.0.5" addrtype="ipv4"/>
+<ports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack"/></port>
+<port protocol="udp" portid="53"><state state="open" reason="udp-response"/></port>
+</ports>
+</host>
+<host><status state="up" reason="user-set"/>
+<address addr="2001:db8::1" addrtype="ipv6"/>
+<ports>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack"/></port>
+<port protocol="tcp" portid="3306"><state state="closed" reason="conn-refused"/></port>
+</ports>
+</host>
+<host><status state="up" reason="user-set"/>
+<address addr="10.0.0.6" addrtype="ipv4"/>
+</host>
+</nmaprun>
