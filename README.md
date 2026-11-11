@@ -26,6 +26,7 @@ sudo exposedwatch
 | ------- | ------------ |
 | `exposedwatch` | Interactive full-screen view (same as `exposedwatch tui`) |
 | `exposedwatch scan` | One-shot report for scripts and cron (table or JSON) |
+| `exposedwatch baseline save` | Record the exposed ports as a baseline; use it with `scan --baseline` (see [Baseline mode](#baseline-mode-cron)) |
 | `exposedwatch version` | Print the version (also `--version`) |
 | `exposedwatch help` | Show help (also `-h`, `--help`) |
 
@@ -181,12 +182,58 @@ Exit codes (shared by all commands):
 | 1 | Runtime error |
 | 2 | Usage error (bad flag or command) |
 | 3 | Findings at or above `--min-severity` were found |
+| 4 | Drift: new ports compared with a baseline (only `scan --baseline`, which never uses 3; see [Baseline mode](#baseline-mode-cron)) |
 
 Cron or CI example: fail the job when something medium or worse is exposed.
 
 ```sh
 exposedwatch scan --min-severity medium --format json > exposure.json || echo "exposure check exited with $?"
 ```
+
+## Baseline mode (cron)
+
+A baseline is a list of the ports you have accepted as exposed. `scan --baseline` compares what is exposed now with that list and reports only the difference, so a cron job is quiet until something new appears. Both commands are information only: they never open, close or change anything on the system.
+
+```sh
+sudo exposedwatch baseline save              # record the ports exposed right now
+sudo exposedwatch scan --baseline /var/lib/exposedwatch/baseline.json
+```
+
+`baseline save` runs the host scan and, unless `--no-docker` is given, the Docker scan (never the external nmap scan), writes the baseline and prints one line: `Baseline saved to <path> (<N> ports)`. Flags: `--file`, `--proc-root`, `--docker-socket`, `--no-docker`, `--allow-partial`, `--force`.
+
+`scan --baseline FILE` works with `--format table|json`, `--no-docker`, `--proc-root`, `--docker-socket`, `--firewall`, `--external` and `--min-severity`. It prints the normal report plus a `Drift` section (or, with `--format json`, a top-level `drift` object with `baseline_file`, `created_at`, `new`, `closed` and `notes`; empty lists are `[]`). Without `--baseline` the output is exactly the same as before.
+
+Exit codes with `--baseline`:
+
+| Code | Meaning |
+| ---- | ------- |
+| 0 | No drift: no new port at or above `--min-severity` (also when only closed ports differ) |
+| 1 | Runtime error, including a missing, untrusted, corrupt or unreadable baseline (run `exposedwatch baseline save`), or a source (host, Docker, external) that could not be read during the scan while no new port reached `--min-severity` |
+| 2 | Usage error |
+| 4 | Drift: at least one NEW port reaches `--min-severity`; it wins over 1 when both apply |
+
+Exit code 3 is **not** used in baseline mode, because accepted ports are expected to stay exposed. A new port counts at the severity of its most severe finding; a port without any finding (for example one bound to loopback) counts as `info`, so with the default `--min-severity info` every new port counts. Ports that are in the baseline but no longer exposed are listed as `CLOSED` and are informational: closed-only drift exits 0. A source that fails during the scan makes the result partial, so cron never sees a silent clean run: stderr gets an `unverified sources: <names>` line, the Drift section and the JSON `notes` say so (always, whether or not the baseline had entries for that source) and the exit code is 1, unless new ports at or above `--min-severity` were found, in which case it is 4.
+
+Cron example (adapt the path, the schedule and the alert command to your system):
+
+```sh
+# Example only: every hour, run the comparison and react when it exits with a non-zero code.
+0 * * * * root exposedwatch scan --baseline /var/lib/exposedwatch/baseline.json --no-docker >/dev/null || logger -t exposedwatch "drift or error: exit code $?"
+```
+
+Because a non-zero code can also be a runtime error (1), check the exit code, not just success, when you need to tell drift (4) from a broken baseline.
+
+What the baseline holds and where it lives:
+
+- The identity of a port is protocol + port + bind address + source (`host` or `docker`). A service that moves from `127.0.0.1` to `0.0.0.0` is a NEW port, because its exposure changed.
+- The file is JSON with a `version`, `created_at` (UTC), `tool_version` and the `entries`, sorted. It holds no process names, container names, remote addresses or host name, so it is safe to copy around.
+- Default path: `/var/lib/exposedwatch/baseline.json` as root; otherwise `$XDG_STATE_HOME/exposedwatch/baseline.json` (when it is an absolute path) or `~/.local/state/exposedwatch/baseline.json`. `--file` overrides it. The directory is created with mode 0700 and the file with 0600, written atomically (a failed save keeps the previous file).
+- Loading is strict, because a tampered baseline would hide new ports. The file is refused when it is a symbolic link, changed while it was opened, is not owned by the user running the command (as root: not owned by root), or can be written by group or others; it must also be a regular file (a FIFO, device or directory is refused without blocking). As root it is also refused when its directory can be written by group or others or is not owned by root; as another user that only prints a warning (the directory must be owned by that user or by root). Only the immediate directory is checked, not its ancestors, so keep the state directory under root-owned parents. The file is read up to 4 MiB; unknown fields, a version other than 1, invalid entries and more than 20000 entries are rejected, and duplicate entries collapse. Error messages never print the file contents.
+- If a source cannot be read while saving (for example Docker is not running), `baseline save` refuses to write a partial baseline, which would hide the whole source; pass `--allow-partial` to save anyway. If a source cannot be read during `scan --baseline`, its ports are unknown, not closed: its baseline entries are not reported as closed (see the exit codes above).
+- `baseline save` refuses to overwrite an existing path that is not a baseline: the target must be missing, or a regular file (never a symbolic link) that loads as a trusted, valid baseline; otherwise it exits 1 with `refusing to overwrite <path>: it is not a baseline file (use --force to replace it anyway)`. `--force` is dangerous: it replaces a regular file even if its content is not a baseline, and it still never follows a symbolic link or replaces a directory.
+- Bind addresses are stored in canonical form (lowercase, IPv4-mapped IPv6 written as IPv4, no IPv6 zone); `0.0.0.0` and `::` stay different entries.
+
+`watch --baseline` (using the baseline in the headless alert loop) is planned and does not exist yet.
 
 ## External scan (nmap)
 
