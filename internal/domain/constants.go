@@ -48,3 +48,6 @@ const (
 	AllInterfaces
 	Public
 )
+
+// Error message formats.
+const unknownSeverityMessage = "unknown severity %q"
