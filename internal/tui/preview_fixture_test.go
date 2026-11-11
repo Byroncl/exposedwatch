@@ -35,6 +35,31 @@ func previewReport(ports []domain.Port) app.Report {
 	return app.Report{Ports: ports, Findings: risk.Evaluate(ports)}
 }
 
+func previewConnection(direction domain.ConnectionDirection, localPort int, remoteAddress string, remotePort int, process string) domain.Connection {
+	return testConnection(direction, localPort, remoteAddress, remotePort, process)
+}
+
+// previewConnectionsBaseline is the first connection snapshot of the preview.
+func previewConnectionsBaseline() []domain.Connection {
+	return []domain.Connection{
+		previewConnection(domain.ConnectionInbound, 22, "203.0.113.7", 51000, "sshd"),
+		previewConnection(domain.ConnectionInbound, 22, "203.0.113.8", 51044, "sshd"),
+		previewConnection(domain.ConnectionInbound, 443, "198.51.100.23", 40001, "nginx"),
+		previewConnection(domain.ConnectionInbound, 443, "198.51.100.24", 40002, "nginx"),
+		previewConnection(domain.ConnectionInbound, 443, "203.0.113.7", 40003, "nginx"),
+		previewConnection(domain.ConnectionInbound, 5432, "10.0.0.9", 52100, "postgres"),
+		previewConnection(domain.ConnectionOutbound, 44122, "192.0.2.10", 443, "curl"),
+		previewConnection(domain.ConnectionOutbound, 44190, "192.0.2.53", 5432, ""),
+		previewConnection(domain.ConnectionInbound, 5432, "127.0.0.1", 50210, "postgres"),
+	}
+}
+
+// previewConnections adds one new inbound connection to the baseline.
+func previewConnections() []domain.Connection {
+	return append(previewConnectionsBaseline(),
+		previewConnection(domain.ConnectionInbound, 8080, "198.51.100.77", 41000, "webapp"))
+}
+
 // previewModel builds a model with a baseline, one NEW port and two closed ports.
 func previewModel(testRun *testing.T) Model {
 	testRun.Helper()
@@ -46,8 +71,10 @@ func previewModel(testRun *testing.T) Model {
 	}
 	closedFirst := previewPort(3306, domain.TCP, "0.0.0.0", "mysqld", "", domain.SourceHost)
 	closedSecond := previewPort(3389, domain.TCP, "0.0.0.0", "xrdp", "", domain.SourceHost)
-	model := New(Options{Scanner: fakeScanner{}, Interval: testInterval, Version: testVersion})
+	model := New(Options{Scanner: fakeScanner{}, Connections: fakeConnectionSource{}, Interval: testInterval, Version: testVersion})
 	model = refreshWith(testRun, model, previewReport(append(append([]domain.Port{}, baseline...), closedFirst, closedSecond)), 0)
 	model = refreshWith(testRun, model, previewReport(append(previewPorts(), closedSecond)), 1)
-	return refreshWith(testRun, model, previewReport(previewPorts()), 2)
+	model = refreshWith(testRun, model, previewReport(previewPorts()), 2)
+	model = observeConnections(testRun, model, previewConnectionsBaseline(), 0)
+	return observeConnections(testRun, model, previewConnections(), 130)
 }

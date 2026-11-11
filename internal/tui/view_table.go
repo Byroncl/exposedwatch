@@ -49,6 +49,8 @@ func (model Model) tableContent(frame layout) []string {
 
 func (model Model) emptyMessage() string {
 	switch {
+	case model.activeTab == TabConnections:
+		return model.connectionsEmptyMessage()
 	case !model.hasReport:
 		return scanningMessage
 	case model.activeTab == TabChanges:
@@ -102,12 +104,17 @@ func (model Model) tablePanelTitle() string {
 	if len(model.visibleRows) > 0 {
 		position = fmt.Sprintf(panelPositionFormat, model.activeTab.Title(), model.cursor+1, len(model.visibleRows))
 	}
-	if !model.activeTab.supportsFiltering() {
+	var status string
+	switch model.activeTab {
+	case TabChanges:
 		return position + panelChangesNote + columnSeparator
+	case TabConnections:
+		status = fmt.Sprintf(connectionStatusFormat, model.connectionSortMode, model.loopbackState())
+	default:
+		status = fmt.Sprintf(panelStatusFormat, model.sortMode, model.minSeverity)
 	}
-	status := fmt.Sprintf(panelStatusFormat, model.sortMode, model.minSeverity)
-	if model.filterText != "" {
-		status += fmt.Sprintf(panelFilterFormat, model.filterText)
+	if filterText := model.activeFilterText(); filterText != "" {
+		status += fmt.Sprintf(panelFilterFormat, filterText)
 	}
 	return position + status + columnSeparator
 }

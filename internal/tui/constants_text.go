@@ -88,7 +88,7 @@ const (
 	filterPromptFormat = "/%s%s  (enter apply, esc cancel)"
 	filterCursor       = "_"
 	footerHintJoin     = "  "
-	hintTabs           = "1-3/tab views"
+	hintTabs           = "1-4/tab views"
 	hintMove           = "j/k move"
 	hintEnds           = "g/G top/bottom"
 	hintSort           = "s sort"

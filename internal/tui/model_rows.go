@@ -20,17 +20,8 @@ func (model *Model) rebuildVisibleRows() {
 		current := model.visibleRows[model.cursor].key
 		selected = &current
 	}
-	rows := model.buildRows(model.activeTab)
-	if model.activeTab.supportsFiltering() {
-		filtered := make([]displayRow, 0, len(rows))
-		for _, row := range rows {
-			if row.meetsMinimum(model.minSeverity) && row.matchesText(model.filterText) {
-				filtered = append(filtered, row)
-			}
-		}
-		sortRows(filtered, model.sortMode)
-		rows = filtered
-	}
+	model.refreshConnectionCaches()
+	rows := model.arrangeRows(model.buildRows(model.activeTab))
 	model.visibleRows = rows
 	model.cursor = 0
 	if selected != nil {
@@ -75,5 +66,26 @@ func (model *Model) ensureCursorVisible() {
 	}
 	if model.scrollOffset < scrollOffsetFloor {
 		model.scrollOffset = scrollOffsetFloor
+	}
+}
+
+// arrangeRows filters and sorts the rows of the active tab. Connection rows
+// arrive already filtered; the change log keeps its newest-first order.
+func (model Model) arrangeRows(rows []displayRow) []displayRow {
+	switch model.activeTab {
+	case TabFindings, TabAllPorts:
+		filtered := make([]displayRow, 0, len(rows))
+		for _, row := range rows {
+			if row.meetsMinimum(model.minSeverity) && row.matchesText(model.filterText) {
+				filtered = append(filtered, row)
+			}
+		}
+		sortRows(filtered, model.sortMode)
+		return filtered
+	case TabConnections:
+		sortConnectionRows(rows, model.connectionSortMode)
+		return rows
+	default:
+		return rows
 	}
 }

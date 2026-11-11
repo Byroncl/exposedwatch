@@ -4,9 +4,11 @@ import "fmt"
 
 // layout is the vertical and horizontal budget of one frame.
 type layout struct {
-	width      int
-	height     int
-	warnings   []string
+	width    int
+	height   int
+	warnings []string
+	// showDetail tells whether the bottom area (the Details panel, or the
+	// summary panels of the Connections tab) fits.
 	showDetail bool
 	tableRows  int
 }
@@ -31,6 +33,7 @@ func (model Model) warningLines() []string {
 	if model.refreshErr != nil {
 		lines = append(lines, fmt.Sprintf(refreshWarningFormat, model.refreshErr))
 	}
+	lines = append(lines, model.connectionWarningLines()...)
 	if len(lines) > maxWarningLines {
 		hidden := len(lines) - (maxWarningLines - 1)
 		lines = append(lines[:maxWarningLines-1], fmt.Sprintf(moreWarningsFormat, hidden))
@@ -45,8 +48,8 @@ func (model Model) computeLayout() layout {
 	fixedLines := headerLineCount + tabLineCount + len(warnings) + footerLineCount
 	bodyLines := height - fixedLines
 	tableChrome := panelBorderLineCount + tableHeadingLines
-	detailOuter := detailContentLines + panelBorderLineCount
-	showDetail := bodyLines-detailOuter-tableChrome >= minTableRowsToShow
+	detailOuter := model.bottomOuterLines(width)
+	showDetail := model.hasBottomArea() && bodyLines-detailOuter-tableChrome >= minTableRowsToShow
 	tableOuter := bodyLines
 	if showDetail {
 		tableOuter -= detailOuter

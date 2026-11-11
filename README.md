@@ -55,31 +55,49 @@ Severities: `info`, `low`, `medium`, `high`, `critical`.
 sudo exposedwatch                      # refreshes every 2s
 sudo exposedwatch --interval 5s        # custom refresh interval (minimum 1s)
 sudo exposedwatch --no-docker          # skip Docker discovery
+sudo exposedwatch --no-connections     # disable the Connections tab
 sudo exposedwatch --theme light        # force the palette for light terminals
 ```
 
-Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--theme auto|dark|light` (default `auto`, which detects the terminal background). It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
+Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--theme auto|dark|light` (default `auto`, which detects the terminal background). It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
 
-The header shows the severity counts, an overall risk gauge (`SAFE`, `LOW`, `MEDIUM`, `HIGH` or `CRITICAL`, driven by the highest severity present), the number of ports per source and the `+N new -M closed` counters. Three tabs share the screen:
+The header shows the severity counts, an overall risk gauge (`SAFE`, `LOW`, `MEDIUM`, `HIGH` or `CRITICAL`, driven by the highest severity present), the number of ports per source and the `+N new -M closed` counters. The header also shows `conn N (in X / out Y)` when the width allows it. Four tabs share the screen:
 
 - **Findings** (`1`): one row per finding.
 - **All ports** (`2`): every port, with its severity or `-` when no rule matched.
 - **Changes** (`3`): a log of ports that opened or closed since the view started, newest first (the last 200 entries are kept).
+- **Connections** (`4`): who is connected to this server right now (see below).
 
 The first successful scan is the baseline: nothing is flagged. After each later refresh, ports that opened get a `NEW` badge for 5 refreshes and a log entry; ports that closed get a log entry with their last known severity. `+N new -M closed` counts these events since the view started. A refresh that fails, or a source that fails during a refresh, never produces `closed` events: the previous data of that source is kept. The log lives only in memory and is lost when the view exits. A detail panel shows the rule, recommendation, bind address, process or container and when this session first saw the selected port.
 
 | Key | Action |
 | --- | ------ |
 | `tab` / `shift+tab` | Next / previous tab |
-| `1` / `2` / `3` | Jump to Findings / All ports / Changes |
+| `1` / `2` / `3` / `4` | Jump to Findings / All ports / Changes / Connections |
 | `up` / `k`, `down` / `j` | Move selection |
 | `g` / `G` | Jump to top / bottom |
 | `r` | Refresh now |
-| `s` | Cycle sort: severity, port, process (Findings and All ports) |
-| `f` | Cycle minimum severity filter (Findings and All ports) |
-| `/` | Free-text filter (`enter` applies, `esc` cancels; Findings and All ports) |
+| `s` | Cycle sort: severity, port, process (Findings and All ports); direction, local port, remote address, process, age (Connections) |
+| `f` | Cycle minimum severity filter (Findings and All ports; ignored on Connections) |
+| `/` | Free-text filter (`enter` applies, `esc` cancels; on Connections it matches remote address, remote port and process) |
+| `l` | Show or hide loopback-to-loopback connections (Connections; hidden by default) |
 | `?` | Toggle help |
 | `q` / `ctrl+c` | Quit |
+
+### Connections tab
+
+The Connections tab lists the established TCP connections of this host, read from `/proc/net/tcp` and `/proc/net/tcp6` on every refresh. Each row shows the direction (`IN` when the local port is one this host listens on, `OUT` otherwise), the local port (and bind address when there is room), the remote `address:port`, the state, the process (`-` when unknown) and the age: how long this session has been seeing that connection (`12s`, `4m`, `1h`, `2d`). Inbound connections that appeared since the previous refresh get a `NEW` badge for 5 refreshes; the first read is the baseline and flags nothing. Rows are ordered inbound first, then by local port and remote address.
+
+Loopback-to-loopback connections (local services talking to each other) are hidden by default because they are noise; press `l` to show them. The title and the footer say whether they are hidden. Below the table, two panels list the busiest remote addresses and the inbound connection count per local port, computed from the same connections as the table (so they follow `l`). A failed read keeps the previous rows and shows a warning line, and it never delays the port scan, which refreshes independently. If the number of connections reaches the reader's limit, a notice shows how many were read.
+
+Everything stays in memory: remote addresses are shown on screen only, never written to disk or logged, and they are not resolved through DNS.
+
+Limitations:
+
+- Connections are sampled on every refresh, so very short-lived connections between two refreshes can be missed.
+- Only the host's own sockets are read. Connections to Docker-published ports that the kernel handles through NAT may not appear.
+- Process names need `sudo` (root), as for the process column of the port tabs.
+- Only established TCP connections are listed; UDP is not.
 
 ## Scripts, cron and CI: `scan`
 

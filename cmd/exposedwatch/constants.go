@@ -42,13 +42,14 @@ const (
 
 // Flag names.
 const (
-	flagFormat       = "format"
-	flagMinSeverity  = "min-severity"
-	flagProcRoot     = "proc-root"
-	flagDockerSocket = "docker-socket"
-	flagNoDocker     = "no-docker"
-	flagInterval     = "interval"
-	flagTheme        = "theme"
+	flagFormat        = "format"
+	flagMinSeverity   = "min-severity"
+	flagProcRoot      = "proc-root"
+	flagDockerSocket  = "docker-socket"
+	flagNoDocker      = "no-docker"
+	flagNoConnections = "no-connections"
+	flagInterval      = "interval"
+	flagTheme         = "theme"
 
 	flagExternal         = "external"
 	flagExternalTarget   = "external-target"
@@ -69,13 +70,14 @@ const (
 
 // Flag descriptions.
 const (
-	usageFormat       = "output format: table or json"
-	usageMinSeverity  = "minimum severity to display and to trigger exit code 3: info, low, medium, high or critical"
-	usageProcRoot     = "path of the proc filesystem"
-	usageDockerSocket = "path of the Docker Engine unix socket"
-	usageNoDocker     = "skip Docker container discovery"
-	usageInterval     = "auto-refresh interval of the tui, minimum 1s"
-	usageTheme        = "color theme of the tui: auto (detect the terminal background), dark or light"
+	usageFormat        = "output format: table or json"
+	usageMinSeverity   = "minimum severity to display and to trigger exit code 3: info, low, medium, high or critical"
+	usageProcRoot      = "path of the proc filesystem"
+	usageDockerSocket  = "path of the Docker Engine unix socket"
+	usageNoDocker      = "skip Docker container discovery"
+	usageNoConnections = "disable the Connections tab (no connection reads)"
+	usageInterval      = "auto-refresh interval of the tui, minimum 1s"
+	usageTheme         = "color theme of the tui: auto (detect the terminal background), dark or light"
 
 	usageExternal = "also scan this machine from the network side with nmap (TCP connect scan only, UDP is not scanned); " +
 		"by default only this host's own non-loopback IPv4 addresses are scanned; requires nmap to be installed"
@@ -108,7 +110,7 @@ Commands:
   help      show this help
 
 Run "exposedwatch tui -h" or "exposedwatch scan -h" for flags.
-The tui accepts --interval and --theme auto|dark|light.
+The tui accepts --interval, --theme auto|dark|light and --no-connections.
 Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 `
 	versionFormat        = "exposedwatch %s"
