@@ -34,9 +34,9 @@ func (model Model) handleConnectionsResult(result ConnectionsResultMessage) Mode
 }
 
 // toggleLoopback shows or hides loopback-to-loopback connections. It only
-// acts on the Connections tab.
+// acts on the connection views (Live and Top remote).
 func (model *Model) toggleLoopback() {
-	if model.activeTab != TabConnections || !model.connectionsEnabled() {
+	if !model.activeTab.usesConnections() || !model.connectionsEnabled() {
 		return
 	}
 	model.hideLoopback = !model.hideLoopback
@@ -44,9 +44,9 @@ func (model *Model) toggleLoopback() {
 }
 
 // toggleInboundOnly shows only inbound connections, or all of them again. It
-// only acts on the Connections tab.
+// only acts on the connection views (Live and Top remote).
 func (model *Model) toggleInboundOnly() {
-	if model.activeTab != TabConnections || !model.connectionsEnabled() {
+	if !model.activeTab.usesConnections() || !model.connectionsEnabled() {
 		return
 	}
 	model.inboundOnly = !model.inboundOnly

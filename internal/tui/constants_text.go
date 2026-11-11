@@ -32,12 +32,15 @@ const (
 
 // Tabs.
 const (
-	activeTabFormat    = "[%d %s %d]"
-	inactiveTabFormat  = " %d %s %d "
-	compactActiveTab   = "[%d]"
-	compactInactiveTab = " %d "
-	tabDivider         = "│"
-	tabGap             = " "
+	activeTabFormat   = "[%d %s %d]"
+	inactiveTabFormat = " %d %s %d "
+	// Tabs without a count (Summary, Top remote, placeholders).
+	activeTabPlainFormat   = "[%d %s]"
+	inactiveTabPlainFormat = " %d %s "
+	compactActiveTab       = "[%d]"
+	compactInactiveTab     = " %d "
+	tabDivider             = "│"
+	tabGap                 = " "
 )
 
 // Table headings.
@@ -88,7 +91,9 @@ const (
 	filterPromptFormat = "/%s%s  (enter apply, esc cancel)"
 	filterCursor       = "_"
 	footerHintJoin     = "  "
-	hintTabs           = "1-4/tab views"
+	hintModules        = "tab modules"
+	hintInnerTabs      = "[/] tabs"
+	hintSidebar        = "b sidebar"
 	hintMove           = "j/k move"
 	hintEnds           = "g/G top/bottom"
 	hintSort           = "s sort"

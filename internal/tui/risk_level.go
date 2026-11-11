@@ -52,8 +52,13 @@ func (level RiskLevel) String() string {
 
 // gaugeCells returns how many gauge cells are filled and empty.
 func (level RiskLevel) gaugeCells() (filled, empty int) {
-	filled = (int(level) + 1) * riskGaugeWidth / (int(RiskCritical) + 1)
-	return filled, riskGaugeWidth - filled
+	return level.gaugeCellsFor(riskGaugeWidth)
+}
+
+// gaugeCellsFor splits a gauge of the given width into filled and empty cells.
+func (level RiskLevel) gaugeCellsFor(width int) (filled, empty int) {
+	filled = (int(level) + 1) * width / (int(RiskCritical) + 1)
+	return filled, width - filled
 }
 
 // severity returns the severity whose color paints this level.

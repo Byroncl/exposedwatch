@@ -14,12 +14,12 @@ func (model Model) footerLine(width int) string {
 	return model.styles.dim.Render(clampWidth(line, width))
 }
 
-// footerHintTexts lists the hints of the active tab, dropping the least
+// footerHintTexts lists the hints of the active view, dropping the least
 // important ones first until the line fits the width.
 func (model Model) footerHintTexts(width int) []string {
 	active := make([]footerHint, 0, len(footerHints))
 	for _, hint := range footerHints {
-		if hint.AppliesToTabs[model.activeTab] && !(hint.NeedsConnections && model.activeTab == TabConnections && !model.connectionsEnabled()) {
+		if hint.shownOn(model) {
 			active = append(active, hint)
 		}
 	}

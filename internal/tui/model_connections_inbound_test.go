@@ -54,7 +54,7 @@ func TestInboundOnlyCountersFollowTheVisibleSet(testRun *testing.T) {
 	if header := strings.Split(model.View(), "\n")[2]; !strings.Contains(header, "conn 3 (in 3 / out 0)") {
 		testRun.Fatalf("header counter must follow the visible set: %q", header)
 	}
-	if !strings.Contains(model.View(), "[4 Connections 3]") {
+	if !strings.Contains(model.View(), "[1 Live 3]") {
 		testRun.Fatalf("tab count must follow the visible set:\n%s", model.View())
 	}
 	rendered := model.View()
@@ -77,12 +77,12 @@ func TestInboundOnlySelectionSurvivesAndClamps(testRun *testing.T) {
 }
 
 func TestInboundKeyIsIgnoredOnOtherTabsAndWhenDisabled(testRun *testing.T) {
-	model := typeKeys(testRun, newConnectionsModel(testRun, fullConnections()), "1", "i")
+	model := typeKeys(testRun, newConnectionsModel(testRun, fullConnections()), "shift+tab", "i")
 	if model.inboundOnly {
 		testRun.Fatal("i must only act on the Connections tab")
 	}
 	disabled := New(Options{Scanner: fakeScanner{}, Interval: testInterval, Version: testVersion})
-	disabled = typeKeys(testRun, disabled, "4", "i")
+	disabled = typeKeys(testRun, showModule(testRun, disabled, ModuleConnections), "i")
 	if disabled.inboundOnly {
 		testRun.Fatal("i must be ignored while connections are disabled")
 	}

@@ -101,7 +101,8 @@ func (spec tableSpec) layoutColumns(contentWidth int) ([]column, int) {
 		candidate := spec.fixed[index]
 		cost := candidate.width + len(columnSeparator)
 		if candidate.priority != priorityMandatory && contentWidth-(used+cost) < spec.minFlexWidth {
-			continue
+			// Lower-priority columns never jump ahead of one that was dropped.
+			break
 		}
 		kept[index] = true
 		used += cost

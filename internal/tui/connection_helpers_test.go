@@ -101,7 +101,7 @@ func newConnectionsModel(testRun *testing.T, connections []domain.Connection) Mo
 	model = applyMessage(testRun, model, tea.WindowSizeMsg{Width: testWidth, Height: testHeight})
 	model = applyMessage(testRun, model, RefreshResultMessage{Report: sampleReport(), At: testRefreshTime})
 	model = applyMessage(testRun, model, connectionsResult(connections, 0))
-	return typeKeys(testRun, model, "4")
+	return showModule(testRun, model, ModuleConnections)
 }
 
 func observeConnections(testRun *testing.T, model Model, connections []domain.Connection, offsetSeconds int) Model {

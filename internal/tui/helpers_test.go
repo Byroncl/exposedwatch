@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -186,3 +187,43 @@ func reportWith(report app.Report, number int) app.Report {
 }
 
 var errDockerDown = errors.New("cannot connect to the docker daemon")
+
+// moduleView names one module and one of its inner tabs.
+type moduleView struct {
+	module Module
+	inner  InnerTab
+}
+
+// everyModuleView lists every inner tab of every module.
+func everyModuleView() []moduleView {
+	var views []moduleView
+	for module := ModuleOverview; module < moduleCount; module++ {
+		for inner := range module.innerTabs() {
+			views = append(views, moduleView{module: module, inner: InnerTab(inner)})
+		}
+	}
+	return views
+}
+
+func innerTabKey(inner InnerTab) string {
+	return strconv.Itoa(int(inner) + 1)
+}
+
+// showModule cycles forward with tab until the module is active.
+func showModule(testRun *testing.T, model Model, module Module) Model {
+	testRun.Helper()
+	for attempt := 0; attempt < int(moduleCount) && model.activeModule != module; attempt++ {
+		model = typeKeys(testRun, model, "tab")
+	}
+	if model.activeModule != module {
+		testRun.Fatalf("cannot reach module %v", module)
+	}
+	return model
+}
+
+// showView opens one inner tab of one module.
+func showView(testRun *testing.T, model Model, target moduleView) Model {
+	testRun.Helper()
+	model = showModule(testRun, model, target.module)
+	return typeKeys(testRun, model, innerTabKey(target.inner))
+}

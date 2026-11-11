@@ -24,30 +24,26 @@ func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch action {
 	case ActionQuit:
 		return model, tea.Quit
-	case ActionMoveUp:
-		model.moveCursor(-1)
-	case ActionMoveDown:
-		model.moveCursor(1)
-	case ActionJumpTop:
-		model.setCursor(0)
-	case ActionJumpBottom:
-		model.setCursor(len(model.visibleRows) - 1)
+	case ActionMoveUp, ActionMoveDown, ActionJumpTop, ActionJumpBottom:
+		model.handleCursorAction(action)
 	case ActionRefresh:
 		return model, tea.Batch(model.startIdleReads()...)
 	case ActionToggleHelp:
 		model.viewState = ViewHelp
-	case ActionNextTab:
-		model.switchTab(model.activeTab.Next())
-	case ActionPreviousTab:
-		model.switchTab(model.activeTab.Previous())
-	case ActionShowFindings:
-		model.switchTab(TabFindings)
-	case ActionShowAllPorts:
-		model.switchTab(TabAllPorts)
-	case ActionShowChanges:
-		model.switchTab(TabChanges)
-	case ActionShowConnections:
-		model.switchTab(TabConnections)
+	case ActionNextModule:
+		model.openModule(model.activeModule.Next())
+	case ActionPreviousModule:
+		model.openModule(model.activeModule.Previous())
+	case ActionNextInnerTab:
+		model.cycleInnerTab(1)
+	case ActionPreviousInnerTab:
+		model.cycleInnerTab(-1)
+	case ActionJumpInnerTab:
+		if inner, isInnerTabKey := parseInnerTabKey(keyPress.String()); isInnerTabKey {
+			model.openInnerTab(inner)
+		}
+	case ActionToggleSidebar:
+		model.toggleSidebar()
 	case ActionToggleLoopback:
 		model.toggleLoopback()
 	case ActionToggleInboundOnly:
@@ -56,6 +52,23 @@ func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 		model.handleFilteringAction(action)
 	}
 	return model, nil
+}
+
+// handleCursorAction moves the selection. Only the table views have one.
+func (model *Model) handleCursorAction(action Action) {
+	if !model.activeTab.isTable() {
+		return
+	}
+	switch action {
+	case ActionMoveUp:
+		model.moveCursor(-1)
+	case ActionMoveDown:
+		model.moveCursor(1)
+	case ActionJumpTop:
+		model.setCursor(0)
+	case ActionJumpBottom:
+		model.setCursor(len(model.visibleRows) - 1)
+	}
 }
 
 // handleFilteringAction applies sort, severity and search keys. Each key only

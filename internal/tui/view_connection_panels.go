@@ -19,31 +19,35 @@ func (model Model) bottomOuterLines(width int) int {
 	return 2 * (connectionStackedContentLines + panelBorderLineCount)
 }
 
-// hasBottomArea tells whether the active tab has a bottom area at all: the
-// disabled Connections tab has nothing to summarize.
+// hasBottomArea tells whether the active view has a bottom area at all: only
+// the table views do, and the disabled Live tab has nothing to summarize.
 func (model Model) hasBottomArea() bool {
+	if !model.activeTab.isTable() {
+		return false
+	}
 	return model.activeTab != TabConnections || model.connectionsEnabled()
 }
 
 // bottomPanels renders the bottom area of the active tab.
 func (model Model) bottomPanels(width int) []string {
 	if model.activeTab == TabConnections {
-		return model.connectionPanels(width)
+		return model.connectionPanels(width, detailContentLines, connectionStackedContentLines)
 	}
 	return model.detailPanel(width)
 }
 
 // connectionPanels renders "Top remote addresses" and "Inbound by local port"
-// side by side when wide enough, stacked otherwise.
-func (model Model) connectionPanels(width int) []string {
+// side by side when wide enough (sideBySideLines rows each), stacked otherwise
+// (stackedLines rows each).
+func (model Model) connectionPanels(width, sideBySideLines, stackedLines int) []string {
 	if width < connectionSideBySideMinWidth {
-		stacked := model.topRemotePanel(width, connectionStackedContentLines)
-		return append(stacked, model.inboundPortsPanel(width, connectionStackedContentLines)...)
+		stacked := model.topRemotePanel(width, stackedLines)
+		return append(stacked, model.inboundPortsPanel(width, stackedLines)...)
 	}
 	leftWidth := (width - connectionPanelGap) / 2
 	rightWidth := width - connectionPanelGap - leftWidth
-	left := model.topRemotePanel(leftWidth, detailContentLines)
-	right := model.inboundPortsPanel(rightWidth, detailContentLines)
+	left := model.topRemotePanel(leftWidth, sideBySideLines)
+	right := model.inboundPortsPanel(rightWidth, sideBySideLines)
 	if len(left) != len(right) {
 		return nil
 	}
@@ -76,6 +80,8 @@ func (model Model) summaryPanel(title string, entries []string, width, contentLi
 	contentWidth := panelContentWidth(width)
 	var lines []string
 	switch {
+	case contentLines < 1:
+		lines = nil
 	case len(entries) == 0:
 		lines = []string{model.styles.dim.Render(noInboundConnectionsMessage)}
 	case len(entries) > contentLines:
