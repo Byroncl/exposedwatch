@@ -3,6 +3,7 @@ package report
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -23,24 +24,41 @@ func NewTableRenderer(colorMode ColorMode) *TableRenderer {
 
 // Render writes the findings table, recommendations and failed sources.
 func (renderer *TableRenderer) Render(output io.Writer, scanReport app.Report) error {
+	return renderer.render(output, scanReport, nil)
+}
+
+// RenderWithFirewall writes the same report with a FIREWALL column and a
+// closing Firewall section. The verdicts are information only.
+func (renderer *TableRenderer) RenderWithFirewall(output io.Writer, scanReport app.Report, firewallReport domain.FirewallReport) error {
+	return renderer.render(output, scanReport, &firewallReport)
+}
+
+func (renderer *TableRenderer) render(output io.Writer, scanReport app.Report, firewallReport *domain.FirewallReport) error {
 	var builder strings.Builder
 	if len(scanReport.Findings) == 0 {
 		builder.WriteString(noFindingsText + newline)
 	} else {
-		renderer.writeTable(&builder, scanReport.Findings)
+		renderer.writeTable(&builder, scanReport.Findings, firewallReport)
 		renderer.writeRecommendations(&builder, scanReport.Findings)
 	}
 	fmt.Fprintf(&builder, newline+summaryFormat, len(scanReport.Ports), len(scanReport.Findings))
 	renderer.writeFailedSources(&builder, scanReport.SourceErrors)
+	if firewallReport != nil {
+		renderer.writeFirewallSection(&builder, *firewallReport)
+	}
 	_, err := io.WriteString(output, builder.String())
 	return err
 }
 
-func (renderer *TableRenderer) writeTable(builder *strings.Builder, findings []domain.Finding) {
+func (renderer *TableRenderer) writeTable(builder *strings.Builder, findings []domain.Finding, firewallReport *domain.FirewallReport) {
 	headers := []string{headerSeverity, headerPort, headerProtocol, headerBind, headerExposure, headerSource, headerProcess, headerTitle}
+	verdicts := newVerdictLookup(firewallReport)
+	if firewallReport != nil {
+		headers = slices.Insert(headers, firewallColumnIndex, headerFirewall)
+	}
 	rows := make([][]string, 0, len(findings))
 	for _, finding := range findings {
-		rows = append(rows, []string{
+		row := []string{
 			finding.Severity.String(),
 			strconv.Itoa(finding.Port.Number),
 			string(finding.Port.Protocol),
@@ -49,7 +67,11 @@ func (renderer *TableRenderer) writeTable(builder *strings.Builder, findings []d
 			string(finding.Port.Source),
 			orPlaceholder(processOrContainer(finding.Port)),
 			finding.Title,
-		})
+		}
+		if firewallReport != nil {
+			row = slices.Insert(row, firewallColumnIndex, verdicts.wordFor(finding.Port))
+		}
+		rows = append(rows, row)
 	}
 	widths := make([]int, len(headers))
 	for column, header := range headers {

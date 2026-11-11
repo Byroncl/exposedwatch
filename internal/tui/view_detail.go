@@ -23,6 +23,9 @@ func (model Model) detailLines(contentWidth int) []string {
 	if row.isChange {
 		return model.changeDetailLines(row)
 	}
+	if row.isFirewall {
+		return model.firewallDetailLines(row, contentWidth)
+	}
 	return model.portDetailLines(row, contentWidth)
 }
 
@@ -43,6 +46,7 @@ func (model Model) portDetailLines(row displayRow, contentWidth int) []string {
 		model.bindDetail(row),
 		model.processDetail(row),
 		fmt.Sprintf(detailFirstSeenFormat, firstSeenText(row), stateText(row)),
+		firewallDetailLine(row),
 	}
 	if row.recommendation != "" {
 		lines = append(lines, wrapText(fmt.Sprintf(detailFixFormat, row.recommendation), contentWidth)...)

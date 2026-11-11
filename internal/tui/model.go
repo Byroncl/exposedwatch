@@ -14,8 +14,10 @@ type Options struct {
 	Scanner Scanner
 	// Connections feeds the Connections tab; nil disables it.
 	Connections ConnectionSnapshotter
-	Interval    time.Duration
-	Version     string
+	// Firewall feeds the Firewall module; nil disables it and the firewall is never read.
+	Firewall FirewallEvaluator
+	Interval time.Duration
+	Version  string
 	// Theme selects the palette adaptation; the zero value means ThemeAuto.
 	Theme Theme
 	// Clock returns the current time; defaults to time.Now.
@@ -54,6 +56,21 @@ type Model struct {
 	inboundOnly            bool
 	connectionSortMode     ConnectionSortMode
 	connectionFilterText   string
+
+	// The firewall evaluation is independent from the scan: its own command,
+	// message and throttle. firewallSignature is the host port set that was
+	// last submitted, so a change of the ports can trigger a new evaluation.
+	firewall            FirewallEvaluator
+	firewallReport      domain.FirewallReport
+	firewallIndex       map[firewallPortKey]domain.FirewallFinding
+	hasFirewall         bool
+	firewallAt          time.Time
+	firewallRequestedAt time.Time
+	firewallSignature   string
+	firewallRefreshing  bool
+	firewallErr         error
+	firewallSortMode    FirewallSortMode
+	firewallFilterText  string
 
 	// activeModule and innerTabs (the remembered inner tab of every module)
 	// choose activeTab, the view the content area shows.
@@ -106,6 +123,8 @@ func New(options Options) Model {
 		connectionsRefreshing: options.Connections != nil,
 		connectionTracker:     newConnectionTracker(),
 		hideLoopback:          true,
+
+		firewall: options.Firewall,
 	}
 }
 

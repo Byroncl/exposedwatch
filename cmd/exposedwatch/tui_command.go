@@ -31,6 +31,7 @@ func runTui(arguments []string, stdout, stderr io.Writer) ExitCode {
 	err = tui.Run(tui.Options{
 		Scanner:     app.NewScanService(buildSources(options.ScanOptions)),
 		Connections: buildConnectionSource(options),
+		Firewall:    buildFirewallEvaluator(options),
 		Interval:    options.Interval,
 		Version:     version,
 		Theme:       options.Theme,

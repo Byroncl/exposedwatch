@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Byroncl/exposedwatch/internal/app"
+	"github.com/Byroncl/exposedwatch/internal/domain"
 )
 
 // RefreshResultMessage carries the outcome of one background scan.
@@ -20,6 +21,15 @@ type ConnectionsResultMessage struct {
 	Snapshot app.ConnectionSnapshot
 	Err      error
 	At       time.Time
+}
+
+// FirewallResultMessage carries the outcome of one background firewall
+// evaluation. It is separate from RefreshResultMessage so a slow or failing
+// firewall read never blocks or breaks the port scan.
+type FirewallResultMessage struct {
+	Report domain.FirewallReport
+	Err    error
+	At     time.Time
 }
 
 // tickMessage fires when the auto-refresh interval elapsed.

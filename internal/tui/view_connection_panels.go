@@ -25,7 +25,14 @@ func (model Model) hasBottomArea() bool {
 	if !model.activeTab.isTable() {
 		return false
 	}
-	return model.activeTab != TabConnections || model.connectionsEnabled()
+	switch model.activeTab {
+	case TabConnections:
+		return model.connectionsEnabled()
+	case TabFirewallPorts:
+		return model.firewallEnabled()
+	default:
+		return true
+	}
 }
 
 // bottomPanels renders the bottom area of the active tab.

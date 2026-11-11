@@ -17,8 +17,20 @@ import (
 	"github.com/Byroncl/exposedwatch/internal/report"
 )
 
+// scanDependencies are the parts of the scan command that tests replace.
+type scanDependencies struct {
+	// firewall builds the firewall evaluator; it is only called with --firewall.
+	firewall func() firewallEvaluator
+}
+
 // runScan executes the scan subcommand and selects the exit code.
 func runScan(arguments []string, stdout, stderr io.Writer) ExitCode {
+	return executeScan(arguments, stdout, stderr, scanDependencies{
+		firewall: func() firewallEvaluator { return buildFirewallService() },
+	})
+}
+
+func executeScan(arguments []string, stdout, stderr io.Writer, dependencies scanDependencies) ExitCode {
 	options, err := parseScanOptions(arguments, stderr)
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -41,7 +53,7 @@ func runScan(arguments []string, stdout, stderr io.Writer) ExitCode {
 	}
 	scanReport = scanReport.FilterBySeverity(options.MinSeverity)
 
-	if err := buildRenderer(options.Format, stdout).Render(stdout, scanReport); err != nil {
+	if err := renderScan(ctx, options, stdout, scanReport, dependencies); err != nil {
 		fmt.Fprintf(stderr, renderFailedFormat, err)
 		return ExitRuntimeError
 	}
@@ -49,6 +61,18 @@ func runScan(arguments []string, stdout, stderr io.Writer) ExitCode {
 		return ExitFindings
 	}
 	return ExitOK
+}
+
+// renderScan writes the report. With --firewall it also evaluates the listening
+// ports against the host firewall; that is information only and never changes
+// the report, its findings or the exit code.
+func renderScan(ctx context.Context, options ScanOptions, stdout io.Writer, scanReport app.Report, dependencies scanDependencies) error {
+	renderer := buildRenderer(options.Format, stdout)
+	if !options.Firewall {
+		return renderer.Render(stdout, scanReport)
+	}
+	firewallReport := evaluateFirewall(ctx, dependencies.firewall(), scanReport.Ports)
+	return renderer.RenderWithFirewall(stdout, scanReport, firewallReport)
 }
 
 func buildSources(options ScanOptions) []app.NamedSource {
@@ -74,7 +98,7 @@ func buildSources(options ScanOptions) []app.NamedSource {
 	return sources
 }
 
-func buildRenderer(format OutputFormat, stdout io.Writer) report.Renderer {
+func buildRenderer(format OutputFormat, stdout io.Writer) report.FirewallRenderer {
 	if format == FormatJSON {
 		return report.NewJSONRenderer()
 	}

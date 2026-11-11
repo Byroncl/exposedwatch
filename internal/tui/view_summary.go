@@ -17,6 +17,7 @@ func (model Model) overviewPanel(frame layout) []string {
 		model.chipsLine(),
 		model.overviewCountersLine(),
 		model.overviewConnectionLine(),
+		model.overviewFirewallLine(),
 		"",
 	}
 	lines = append(lines, model.worstFindingLines(innerWidth)...)

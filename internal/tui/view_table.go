@@ -51,6 +51,8 @@ func (model Model) emptyMessage() string {
 	switch {
 	case model.activeTab == TabConnections:
 		return model.connectionsEmptyMessage()
+	case model.activeTab == TabFirewallPorts:
+		return model.firewallEmptyMessage()
 	case !model.hasReport:
 		return scanningMessage
 	case model.activeTab == TabChanges:
@@ -110,6 +112,8 @@ func (model Model) tablePanelTitle() string {
 		return position + panelChangesNote + columnSeparator
 	case TabConnections:
 		status = fmt.Sprintf(connectionStatusFormat, model.connectionSortMode, model.loopbackState(), model.inboundState())
+	case TabFirewallPorts:
+		status = fmt.Sprintf(panelFirewallStatusFmt, model.firewallSortMode)
 	default:
 		status = fmt.Sprintf(panelStatusFormat, model.sortMode, model.minSeverity)
 	}

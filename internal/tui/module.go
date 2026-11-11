@@ -42,7 +42,7 @@ var moduleSpecs = [moduleCount]moduleSpec{
 	},
 	ModuleFirewall: {
 		title: moduleTitleFirewall, compactLabel: moduleCompactFirewall,
-		innerTabs: []innerTabSpec{{TabFirewall, moduleTitleFirewall}},
+		innerTabs: []innerTabSpec{{TabFirewall, tabTitleFirewallStatus}, {TabFirewallPorts, tabTitleFirewallPorts}},
 	},
 	ModuleAlerts: {
 		title: moduleTitleAlerts, compactLabel: moduleCompactAlerts,
@@ -86,5 +86,5 @@ func (module Module) innerTabs() []innerTabSpec {
 
 // isPlaceholder tells whether the module is not implemented yet.
 func (module Module) isPlaceholder() bool {
-	return module == ModuleFirewall || module == ModuleAlerts || module == ModuleSettings
+	return module == ModuleAlerts || module == ModuleSettings
 }

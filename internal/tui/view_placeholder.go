@@ -20,8 +20,6 @@ func (model Model) placeholderPanel(frame layout) []string {
 
 func placeholderText(module Module) string {
 	switch module {
-	case ModuleFirewall:
-		return placeholderFirewallText
 	case ModuleAlerts:
 		return placeholderAlertsText
 	default:
@@ -39,5 +37,6 @@ func (model Model) settingsValueLines() []string {
 		fmt.Sprintf(settingsThemeFormat, model.theme),
 		fmt.Sprintf(settingsIntervalFormat, model.interval),
 		fmt.Sprintf(settingsConnectionsFormat, connections),
+		fmt.Sprintf(settingsFirewallFormat, model.firewallSettingText()),
 	}
 }

@@ -17,9 +17,9 @@ func (set tabSet) contains(tab TabID) bool {
 
 // Views that share a footer hint.
 var (
-	tableTabs      = tabSet{TabFindings, TabAllPorts, TabChanges, TabConnections}
+	tableTabs      = tabSet{TabFindings, TabAllPorts, TabChanges, TabConnections, TabFirewallPorts}
 	portTableTabs  = tabSet{TabFindings, TabAllPorts}
-	searchableTabs = tabSet{TabFindings, TabAllPorts, TabConnections}
+	searchableTabs = tabSet{TabFindings, TabAllPorts, TabConnections, TabFirewallPorts}
 	connectionTabs = tabSet{TabConnections, TabTopRemote}
 	changesTabs    = tabSet{TabChanges}
 )
@@ -32,8 +32,10 @@ type footerHint struct {
 	Label func(model Model) string
 	// NeedsConnections hides the hint on the connection views while they are disabled.
 	NeedsConnections bool
-	AppliesTo        tabSet
-	DropRank         int
+	// NeedsFirewall hides the hint on the Firewall ports view while the firewall is disabled.
+	NeedsFirewall bool
+	AppliesTo     tabSet
+	DropRank      int
 }
 
 // footerHints lists footer entries in display order.
@@ -42,9 +44,9 @@ var footerHints = []footerHint{
 	{Text: hintInnerTabs, DropRank: dropRankInnerTabs},
 	{Text: hintMove, AppliesTo: tableTabs, DropRank: dropRankMove},
 	{Text: hintEnds, AppliesTo: changesTabs, DropRank: dropRankEnds},
-	{Text: hintSort, NeedsConnections: true, AppliesTo: searchableTabs, DropRank: dropRankSort},
+	{Text: hintSort, NeedsConnections: true, NeedsFirewall: true, AppliesTo: searchableTabs, DropRank: dropRankSort},
 	{Text: hintMinimum, AppliesTo: portTableTabs, DropRank: dropRankMinimum},
-	{Text: hintFilter, NeedsConnections: true, AppliesTo: searchableTabs, DropRank: dropRankFilter},
+	{Text: hintFilter, NeedsConnections: true, NeedsFirewall: true, AppliesTo: searchableTabs, DropRank: dropRankFilter},
 	{Label: inboundHintText, NeedsConnections: true, AppliesTo: connectionTabs, DropRank: dropRankInbound},
 	{Label: loopbackHintText, NeedsConnections: true, AppliesTo: connectionTabs, DropRank: dropRankLoopback},
 	{Text: hintRefresh, DropRank: dropRankRefresh},
@@ -58,5 +60,8 @@ func (hint footerHint) shownOn(model Model) bool {
 	if !hint.AppliesTo.contains(model.activeTab) {
 		return false
 	}
-	return !(hint.NeedsConnections && model.activeTab.usesConnections() && !model.connectionsEnabled())
+	if hint.NeedsConnections && model.activeTab.usesConnections() && !model.connectionsEnabled() {
+		return false
+	}
+	return !(hint.NeedsFirewall && model.activeTab.usesFirewall() && !model.firewallEnabled())
 }

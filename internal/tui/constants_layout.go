@@ -10,7 +10,7 @@ const (
 	footerLineCount         = 1
 	panelBorderLineCount    = 2
 	tableHeadingLines       = 1
-	detailContentLines      = 7
+	detailContentLines      = 8
 	minTableRowsToShow      = 5
 	maxWarningLines         = 3
 	scrollOffsetFloor       = 0
@@ -53,6 +53,8 @@ const (
 	priorityConnectionAge
 	priorityConnectionState
 	priorityLocalBind
+	// priorityFirewall is the last to be kept: the FW column drops first.
+	priorityFirewall
 )
 
 // Footer hint drop ranks: higher ranks disappear first on narrow terminals.

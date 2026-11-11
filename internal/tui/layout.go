@@ -45,6 +45,7 @@ func (model Model) warningLines() []string {
 		lines = append(lines, fmt.Sprintf(refreshWarningFormat, model.refreshErr))
 	}
 	lines = append(lines, model.connectionWarningLines()...)
+	lines = append(lines, model.firewallWarningLines()...)
 	if len(lines) > maxWarningLines {
 		hidden := len(lines) - (maxWarningLines - 1)
 		lines = append(lines[:maxWarningLines-1], fmt.Sprintf(moreWarningsFormat, hidden))

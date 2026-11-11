@@ -50,6 +50,8 @@ const (
 	flagDockerSocket  = "docker-socket"
 	flagNoDocker      = "no-docker"
 	flagNoConnections = "no-connections"
+	flagNoFirewall    = "no-firewall"
+	flagFirewall      = "firewall"
 	flagInterval      = "interval"
 	flagTheme         = "theme"
 
@@ -78,6 +80,8 @@ const (
 	usageDockerSocket  = "path of the Docker Engine unix socket"
 	usageNoDocker      = "skip Docker container discovery"
 	usageNoConnections = "disable the Connections tab (no connection reads)"
+	usageNoFirewall    = "disable the Firewall module (no firewall reads)"
+	usageFirewall      = "add the firewall verdict of every listening port (reads iptables-save, needs root; information only, never changes severities or exit codes)"
 	usageInterval      = "auto-refresh interval of the tui, minimum 1s"
 	usageTheme         = "color theme of the tui: auto (detect the terminal background), dark or light"
 
@@ -107,7 +111,8 @@ Run without a command to open the interactive view (same as "tui").
 Commands:
   tui         interactive full-screen view that refreshes automatically (default)
   scan        one-shot report for scripts and cron (table or JSON);
-              add --external to also scan from the network side with nmap
+              add --external to also scan from the network side with nmap,
+              add --firewall to show the host firewall verdict of each port
   watch       headless loop that sends Telegram alerts for new risky ports
               (this is the only feature that sends data to a third party)
   notify-test send one test message to the configured Telegram chat
@@ -116,7 +121,7 @@ Commands:
 
 Run "exposedwatch tui -h", "exposedwatch scan -h", "exposedwatch watch -h" or
 "exposedwatch notify-test -h" for flags.
-The tui accepts --interval, --theme auto|dark|light and --no-connections.
+The tui accepts --interval, --theme auto|dark|light, --no-connections and --no-firewall.
 Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 `
 	versionFormat        = "exposedwatch %s"
@@ -131,6 +136,8 @@ Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 	unexpectedArgsFmt    = "unexpected arguments: %v"
 	scanFailedFormat     = "scan failed: %v"
 	renderFailedFormat   = "rendering failed: %v"
+
+	firewallReadFailedFormat = "firewall could not be read: %v"
 
 	externalTargetNeedsExternalMessage = "--external-target requires --external"
 	externalTargetNeedsConfirmMessage  = "--external-target requires --confirm-ownership: confirm that you own, " +

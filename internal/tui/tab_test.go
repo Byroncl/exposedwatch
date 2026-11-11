@@ -19,7 +19,7 @@ func TestInnerTabsOfEveryModule(testRun *testing.T) {
 		ModuleOverview:    {TabSummary},
 		ModulePorts:       {TabFindings, TabAllPorts, TabChanges},
 		ModuleConnections: {TabConnections, TabTopRemote},
-		ModuleFirewall:    {TabFirewall},
+		ModuleFirewall:    {TabFirewall, TabFirewallPorts},
 		ModuleAlerts:      {TabAlerts},
 		ModuleSettings:    {TabSettings},
 	}

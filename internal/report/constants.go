@@ -41,6 +41,9 @@ const (
 	headerTitle    = "TITLE"
 )
 
+// Position of the FIREWALL column when it is shown: right before the process.
+const firewallColumnIndex = 6
+
 // Table layout.
 const (
 	columnSeparator  = "  "

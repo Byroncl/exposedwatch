@@ -37,6 +37,12 @@ type displayRow struct {
 	changeKind   app.ChangeKind
 	changedAt    time.Time
 
+	// firewall is meaningful only when hasFirewall is true; isFirewall marks
+	// the rows of the Firewall ports table.
+	firewall    domain.FirewallFinding
+	hasFirewall bool
+	isFirewall  bool
+
 	// connection and connectionAge are meaningful only when isConnection is true.
 	isConnection  bool
 	connection    domain.Connection

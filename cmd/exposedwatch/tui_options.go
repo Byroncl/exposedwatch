@@ -16,6 +16,8 @@ type TuiOptions struct {
 	Theme    tui.Theme
 	// NoConnections disables the Connections tab.
 	NoConnections bool
+	// NoFirewall disables the Firewall module (no firewall reads).
+	NoFirewall bool
 }
 
 // parseTuiOptions parses and validates tui flags.
@@ -27,6 +29,7 @@ func parseTuiOptions(arguments []string, errorOutput io.Writer) (TuiOptions, err
 	flagSet.StringVar(&options.DockerSocket, flagDockerSocket, defaultDockerSock, usageDockerSocket)
 	flagSet.BoolVar(&options.NoDocker, flagNoDocker, false, usageNoDocker)
 	flagSet.BoolVar(&options.NoConnections, flagNoConnections, false, usageNoConnections)
+	flagSet.BoolVar(&options.NoFirewall, flagNoFirewall, false, usageNoFirewall)
 	flagSet.DurationVar(&options.Interval, flagInterval, tui.DefaultInterval, usageInterval)
 	themeName := defaultTheme
 	flagSet.StringVar(&themeName, flagTheme, defaultTheme, usageTheme)

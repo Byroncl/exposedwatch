@@ -40,6 +40,8 @@ func (model Model) sidebarBadgeFor(module Module) sidebarBadge {
 			return sidebarBadge{}
 		}
 		return sidebarBadge{text: cappedCount(model.connectionSummary.Total)}
+	case ModuleFirewall:
+		return model.firewallBadge()
 	case ModuleAlerts:
 		return sidebarBadge{text: sidebarBadgeOff}
 	default:

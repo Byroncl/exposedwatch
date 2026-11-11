@@ -27,7 +27,7 @@ func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case ActionMoveUp, ActionMoveDown, ActionJumpTop, ActionJumpBottom:
 		model.handleCursorAction(action)
 	case ActionRefresh:
-		return model, tea.Batch(model.startIdleReads()...)
+		return model, tea.Batch(model.startIdleReads(true)...)
 	case ActionToggleHelp:
 		model.viewState = ViewHelp
 	case ActionNextModule:
@@ -80,11 +80,7 @@ func (model *Model) handleFilteringAction(action Action) {
 		if !model.acceptsSortAndSearch() {
 			return
 		}
-		if model.activeTab == TabConnections {
-			model.connectionSortMode = model.connectionSortMode.Next()
-		} else {
-			model.sortMode = model.sortMode.Next()
-		}
+		model.cycleActiveSort()
 		model.rebuildVisibleRows()
 	case ActionCycleMinimumSeverity:
 		if !model.activeTab.supportsMinimumSeverity() {
@@ -101,21 +97,42 @@ func (model *Model) handleFilteringAction(action Action) {
 	}
 }
 
-// activeFilterText is the free-text filter of the active tab. The Connections
-// tab keeps its own, so a port filter never hides connections.
-func (model Model) activeFilterText() string {
-	if model.activeTab == TabConnections {
-		return model.connectionFilterText
+// cycleActiveSort moves the active tab to its next sort mode. Every table
+// keeps its own mode.
+func (model *Model) cycleActiveSort() {
+	switch model.activeTab {
+	case TabConnections:
+		model.connectionSortMode = model.connectionSortMode.Next()
+	case TabFirewallPorts:
+		model.firewallSortMode = model.firewallSortMode.Next()
+	default:
+		model.sortMode = model.sortMode.Next()
 	}
-	return model.filterText
+}
+
+// activeFilterText is the free-text filter of the active tab. The Connections
+// and Firewall ports tabs keep their own, so a port filter never hides
+// connections or verdicts.
+func (model Model) activeFilterText() string {
+	switch model.activeTab {
+	case TabConnections:
+		return model.connectionFilterText
+	case TabFirewallPorts:
+		return model.firewallFilterText
+	default:
+		return model.filterText
+	}
 }
 
 func (model *Model) setActiveFilterText(text string) {
-	if model.activeTab == TabConnections {
+	switch model.activeTab {
+	case TabConnections:
 		model.connectionFilterText = text
-		return
+	case TabFirewallPorts:
+		model.firewallFilterText = text
+	default:
+		model.filterText = text
 	}
-	model.filterText = text
 }
 
 func (model Model) handleHelpKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
