@@ -55,18 +55,29 @@ Severities: `info`, `low`, `medium`, `high`, `critical`.
 sudo exposedwatch                      # refreshes every 2s
 sudo exposedwatch --interval 5s        # custom refresh interval (minimum 1s)
 sudo exposedwatch --no-docker          # skip Docker discovery
+sudo exposedwatch --theme light        # force the palette for light terminals
 ```
 
-Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`. It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
+Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--theme auto|dark|light` (default `auto`, which detects the terminal background). It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
+
+The header shows the severity counts, an overall risk gauge (`SAFE`, `LOW`, `MEDIUM`, `HIGH` or `CRITICAL`, driven by the highest severity present), the number of ports per source and the `+N new -M closed` counters. Three tabs share the screen:
+
+- **Findings** (`1`): one row per finding.
+- **All ports** (`2`): every port, with its severity or `-` when no rule matched.
+- **Changes** (`3`): a log of ports that opened or closed since the view started, newest first (the last 200 entries are kept).
+
+The first successful scan is the baseline: nothing is flagged. After each later refresh, ports that opened get a `NEW` badge for 5 refreshes and a log entry; ports that closed get a log entry with their last known severity. `+N new -M closed` counts these events since the view started. A refresh that fails, or a source that fails during a refresh, never produces `closed` events: the previous data of that source is kept. The log lives only in memory and is lost when the view exits. A detail panel shows the rule, recommendation, bind address, process or container and when this session first saw the selected port.
 
 | Key | Action |
 | --- | ------ |
+| `tab` / `shift+tab` | Next / previous tab |
+| `1` / `2` / `3` | Jump to Findings / All ports / Changes |
 | `up` / `k`, `down` / `j` | Move selection |
 | `g` / `G` | Jump to top / bottom |
 | `r` | Refresh now |
-| `s` | Cycle sort: severity, port, process |
-| `f` | Cycle minimum severity filter |
-| `/` | Free-text filter (`enter` applies, `esc` cancels) |
+| `s` | Cycle sort: severity, port, process (Findings and All ports) |
+| `f` | Cycle minimum severity filter (Findings and All ports) |
+| `/` | Free-text filter (`enter` applies, `esc` cancels; Findings and All ports) |
 | `?` | Toggle help |
 | `q` / `ctrl+c` | Quit |
 

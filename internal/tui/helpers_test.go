@@ -94,6 +94,10 @@ func keyMessage(key string) tea.KeyMsg {
 		return tea.KeyMsg{Type: tea.KeyDown}
 	case "enter":
 		return tea.KeyMsg{Type: tea.KeyEnter}
+	case "tab":
+		return tea.KeyMsg{Type: tea.KeyTab}
+	case "shift+tab":
+		return tea.KeyMsg{Type: tea.KeyShiftTab}
 	case "esc":
 		return tea.KeyMsg{Type: tea.KeyEsc}
 	case "ctrl+c":
@@ -104,9 +108,9 @@ func keyMessage(key string) tea.KeyMsg {
 }
 
 func visiblePorts(model Model) []int {
-	numbers := make([]int, 0, len(model.visibleFindings))
-	for _, finding := range model.visibleFindings {
-		numbers = append(numbers, finding.Port.Number)
+	numbers := make([]int, 0, len(model.visibleRows))
+	for _, row := range model.visibleRows {
+		numbers = append(numbers, row.port.Number)
 	}
 	return numbers
 }
@@ -135,6 +139,50 @@ func assertRendersWithin(testRun *testing.T, model Model, width, height int) {
 			testRun.Errorf("%dx%d: line width %d exceeds width: %q", width, height, lipgloss.Width(line), line)
 		}
 	}
+}
+
+// quietPort is a loopback port: it is listed but produces no finding.
+func quietPort() domain.Port {
+	return domain.Port{Number: 631, Protocol: domain.TCP, BindAddress: "127.0.0.1", Process: "cupsd", Source: domain.SourceHost}
+}
+
+func sampleReportWithQuietPort() app.Report {
+	report := sampleReport()
+	report.Ports = append(report.Ports, quietPort())
+	return report
+}
+
+func refreshWith(testRun *testing.T, model Model, report app.Report, offsetMinutes int) Model {
+	testRun.Helper()
+	return applyMessage(testRun, model, RefreshResultMessage{Report: report, At: timeAfter(offsetMinutes)})
+}
+
+// reportWithout drops the ports (and their findings) with the given numbers.
+func reportWithout(report app.Report, numbers ...int) app.Report {
+	dropped := make(map[int]bool, len(numbers))
+	for _, number := range numbers {
+		dropped[number] = true
+	}
+	var reduced app.Report
+	for _, port := range report.Ports {
+		if !dropped[port.Number] {
+			reduced.Ports = append(reduced.Ports, port)
+		}
+	}
+	for _, finding := range report.Findings {
+		if !dropped[finding.Port.Number] {
+			reduced.Findings = append(reduced.Findings, finding)
+		}
+	}
+	return reduced
+}
+
+// reportWith adds a medium-severity finding for a new host port.
+func reportWith(report app.Report, number int) app.Report {
+	finding := makeFinding(number, domain.Medium, "fresh")
+	report.Ports = append(append([]domain.Port{}, report.Ports...), finding.Port)
+	report.Findings = append(append([]domain.Finding{}, report.Findings...), finding)
+	return report
 }
 
 var errDockerDown = errors.New("cannot connect to the docker daemon")

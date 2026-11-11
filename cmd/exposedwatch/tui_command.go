@@ -31,6 +31,7 @@ func runTui(arguments []string, stdout, stderr io.Writer) ExitCode {
 		Scanner:  app.NewScanService(buildSources(options.ScanOptions)),
 		Interval: options.Interval,
 		Version:  version,
+		Theme:    options.Theme,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, tuiFailedFormat, err)

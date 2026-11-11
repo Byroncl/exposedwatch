@@ -40,16 +40,16 @@ func TestSortCyclesThroughPortProcessAndBack(testRun *testing.T) {
 func TestMinimumSeverityFilterCycles(testRun *testing.T) {
 	model := newTestModel(testRun)
 	model = typeKeys(testRun, model, "f")
-	if model.minSeverity != domain.Low || len(model.visibleFindings) != 4 {
-		testRun.Fatalf("low: min=%v rows=%d", model.minSeverity, len(model.visibleFindings))
+	if model.minSeverity != domain.Low || len(model.visibleRows) != 4 {
+		testRun.Fatalf("low: min=%v rows=%d", model.minSeverity, len(model.visibleRows))
 	}
 	model = typeKeys(testRun, model, "f", "f")
 	if model.minSeverity != domain.High || !equalInts(visiblePorts(model), []int{3306, 22, 443}) {
 		testRun.Fatalf("high: min=%v rows=%v", model.minSeverity, visiblePorts(model))
 	}
 	model = typeKeys(testRun, model, "f", "f")
-	if model.minSeverity != domain.Info || len(model.visibleFindings) != 5 {
-		testRun.Fatalf("wrapped: min=%v rows=%d", model.minSeverity, len(model.visibleFindings))
+	if model.minSeverity != domain.Info || len(model.visibleRows) != 5 {
+		testRun.Fatalf("wrapped: min=%v rows=%d", model.minSeverity, len(model.visibleRows))
 	}
 }
 
@@ -64,8 +64,8 @@ func TestTextFilterAppliesOnEnterAndCancelsOnEscape(testRun *testing.T) {
 		testRun.Fatalf("applied: state=%v rows=%v", model.viewState, visiblePorts(model))
 	}
 	model = typeKeys(testRun, model, "/", "x", "esc")
-	if model.viewState != ViewTable || model.filterText != "ssh" || len(model.visibleFindings) != 1 {
-		testRun.Fatalf("cancelled: state=%v filter=%q rows=%d", model.viewState, model.filterText, len(model.visibleFindings))
+	if model.viewState != ViewTable || model.filterText != "ssh" || len(model.visibleRows) != 1 {
+		testRun.Fatalf("cancelled: state=%v filter=%q rows=%d", model.viewState, model.filterText, len(model.visibleRows))
 	}
 }
 
@@ -105,11 +105,11 @@ func TestCursorNavigationIsClamped(testRun *testing.T) {
 		testRun.Fatalf("cursor = %d, want 2", model.cursor)
 	}
 	model = typeKeys(testRun, model, "G")
-	if model.cursor != len(model.visibleFindings)-1 {
+	if model.cursor != len(model.visibleRows)-1 {
 		testRun.Fatalf("cursor = %d at bottom", model.cursor)
 	}
 	model = typeKeys(testRun, model, "j")
-	if model.cursor != len(model.visibleFindings)-1 {
+	if model.cursor != len(model.visibleRows)-1 {
 		testRun.Fatalf("cursor moved past the end: %d", model.cursor)
 	}
 	model = typeKeys(testRun, model, "g")
@@ -149,7 +149,7 @@ func TestScanCommandDeliversResult(testRun *testing.T) {
 func TestRefreshSuccessUpdatesViewCountsAndTime(testRun *testing.T) {
 	model := newTestModel(testRun)
 	rendered := model.View()
-	for _, expected := range []string{testVersion, "03:04:05", "critical 1", "high 2", "medium 0", "low 1", "info 1", "ports 5"} {
+	for _, expected := range []string{testVersion, "03:04:05", "CRITICAL 1", "HIGH 2", "MEDIUM 0", "LOW 1", "INFO 1", "ports 5"} {
 		if !strings.Contains(rendered, expected) {
 			testRun.Errorf("view missing %q", expected)
 		}
@@ -168,16 +168,16 @@ func TestPartialFailureShowsWarningAndKeepsRows(testRun *testing.T) {
 	if !strings.Contains(rendered, "docker") || !strings.Contains(rendered, "cannot connect") {
 		testRun.Fatalf("warning missing:\n%s", rendered)
 	}
-	if len(model.visibleFindings) != 5 {
-		testRun.Fatalf("rows = %d", len(model.visibleFindings))
+	if len(model.visibleRows) != 5 {
+		testRun.Fatalf("rows = %d", len(model.visibleRows))
 	}
 }
 
 func TestFailedRefreshKeepsPreviousDataAndShowsError(testRun *testing.T) {
 	model := newTestModel(testRun)
 	model = applyMessage(testRun, model, RefreshResultMessage{Err: errDockerDown, At: testRefreshTime})
-	if len(model.visibleFindings) != 5 || !strings.Contains(model.View(), "cannot connect") {
-		testRun.Fatalf("rows=%d view=%s", len(model.visibleFindings), model.View())
+	if len(model.visibleRows) != 5 || !strings.Contains(model.View(), "cannot connect") {
+		testRun.Fatalf("rows=%d view=%s", len(model.visibleRows), model.View())
 	}
 	model = applyMessage(testRun, model, RefreshResultMessage{Report: sampleReport(), At: testRefreshTime})
 	if strings.Contains(model.View(), "cannot connect") {
@@ -189,9 +189,11 @@ func TestSelectionSurvivesRefresh(testRun *testing.T) {
 	model := newTestModel(testRun)
 	model = typeKeys(testRun, model, "j", "j") // port 443
 	reordered := sampleReport()
-	reordered.Findings = append([]domain.Finding{makeFinding(1, domain.Critical, "newcomer")}, reordered.Findings...)
+	newcomer := makeFinding(1, domain.Critical, "newcomer")
+	reordered.Findings = append([]domain.Finding{newcomer}, reordered.Findings...)
+	reordered.Ports = append([]domain.Port{newcomer.Port}, reordered.Ports...)
 	model = applyMessage(testRun, model, RefreshResultMessage{Report: reordered, At: testRefreshTime})
-	if got := model.visibleFindings[model.cursor].Port.Number; got != 443 {
+	if got := model.visibleRows[model.cursor].port.Number; got != 443 {
 		testRun.Fatalf("selected port = %d, want 443", got)
 	}
 }
@@ -214,7 +216,7 @@ func TestEmptyStates(testRun *testing.T) {
 	}
 	model := newTestModel(testRun)
 	model = typeKeys(testRun, model, "/", "z", "z", "z", "enter")
-	if !strings.Contains(model.View(), "No findings match") {
+	if !strings.Contains(model.View(), "No rows match") {
 		testRun.Error("want empty filter message")
 	}
 	assertRendersWithin(testRun, model, testWidth, testHeight)
