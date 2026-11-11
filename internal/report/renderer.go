@@ -19,3 +19,10 @@ type FirewallRenderer interface {
 	Renderer
 	RenderWithFirewall(output io.Writer, scanReport app.Report, firewallReport domain.FirewallReport) error
 }
+
+// DriftRenderer is a FirewallRenderer that can also show the drift of a scan
+// compared to a baseline. The firewall report is optional (nil).
+type DriftRenderer interface {
+	FirewallRenderer
+	RenderWithDrift(output io.Writer, scanReport app.Report, firewallReport *domain.FirewallReport, driftReport app.DriftReport) error
+}

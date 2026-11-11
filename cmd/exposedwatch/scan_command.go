@@ -43,6 +43,18 @@ func executeScan(arguments []string, stdout, stderr io.Writer, dependencies scan
 		return ExitUsage
 	}
 
+	// The baseline is read before scanning: a missing or untrusted baseline
+	// must fail fast, before anything is scanned.
+	var loadedBaseline *baselineInput
+	if options.BaselineFile != "" {
+		input, err := loadBaselineInput(options.BaselineFile, stderr)
+		if err != nil {
+			fmt.Fprintf(stderr, baselineLoadFailedFormat, err)
+			return ExitRuntimeError
+		}
+		loadedBaseline = &input
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
@@ -51,11 +63,21 @@ func executeScan(arguments []string, stdout, stderr io.Writer, dependencies scan
 		fmt.Fprintf(stderr, scanFailedFormat, err)
 		return ExitRuntimeError
 	}
+	// Drift is computed from the unfiltered report: --min-severity only
+	// decides what is displayed and what counts, never what exists.
+	var driftReport *app.DriftReport
+	if loadedBaseline != nil {
+		built := loadedBaseline.compare(scanReport)
+		driftReport = &built
+	}
 	scanReport = scanReport.FilterBySeverity(options.MinSeverity)
 
-	if err := renderScan(ctx, options, stdout, scanReport, dependencies); err != nil {
+	if err := renderScan(ctx, options, stdout, scanReport, driftReport, dependencies); err != nil {
 		fmt.Fprintf(stderr, renderFailedFormat, err)
 		return ExitRuntimeError
+	}
+	if driftReport != nil {
+		return baselineExitCode(*driftReport, options.MinSeverity, stderr)
 	}
 	if scanReport.HasFindingsAtOrAbove(options.MinSeverity) {
 		return ExitFindings
@@ -65,9 +87,18 @@ func executeScan(arguments []string, stdout, stderr io.Writer, dependencies scan
 
 // renderScan writes the report. With --firewall it also evaluates the listening
 // ports against the host firewall; that is information only and never changes
-// the report, its findings or the exit code.
-func renderScan(ctx context.Context, options ScanOptions, stdout io.Writer, scanReport app.Report, dependencies scanDependencies) error {
+// the report, its findings or the exit code. With a drift report the drift
+// section is added at the end.
+func renderScan(ctx context.Context, options ScanOptions, stdout io.Writer, scanReport app.Report, driftReport *app.DriftReport, dependencies scanDependencies) error {
 	renderer := buildRenderer(options.Format, stdout)
+	if driftReport != nil {
+		var firewallReport *domain.FirewallReport
+		if options.Firewall {
+			evaluated := evaluateFirewall(ctx, dependencies.firewall(), scanReport.Ports)
+			firewallReport = &evaluated
+		}
+		return renderer.RenderWithDrift(stdout, scanReport, firewallReport, *driftReport)
+	}
 	if !options.Firewall {
 		return renderer.Render(stdout, scanReport)
 	}
@@ -98,7 +129,7 @@ func buildSources(options ScanOptions) []app.NamedSource {
 	return sources
 }
 
-func buildRenderer(format OutputFormat, stdout io.Writer) report.FirewallRenderer {
+func buildRenderer(format OutputFormat, stdout io.Writer) report.DriftRenderer {
 	if format == FormatJSON {
 		return report.NewJSONRenderer()
 	}

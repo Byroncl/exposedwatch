@@ -49,25 +49,38 @@ type jsonReport struct {
 	SourceErrors []jsonSourceError `json:"source_errors"`
 	// Firewall is only present when the report was rendered with firewall verdicts.
 	Firewall *jsonFirewall `json:"firewall,omitempty"`
+	// Drift is only present when the scan was compared to a baseline.
+	Drift *jsonDrift `json:"drift,omitempty"`
 }
 
 // Render writes the report as JSON.
 func (renderer *JSONRenderer) Render(output io.Writer, scanReport app.Report) error {
-	return renderer.render(output, scanReport, nil)
+	return renderer.render(output, scanReport, nil, nil)
 }
 
 // RenderWithFirewall writes the report as JSON with an extra top-level
 // firewall object.
 func (renderer *JSONRenderer) RenderWithFirewall(output io.Writer, scanReport app.Report, firewallReport domain.FirewallReport) error {
-	return renderer.render(output, scanReport, toJSONFirewall(firewallReport))
+	return renderer.render(output, scanReport, toJSONFirewall(firewallReport), nil)
 }
 
-func (renderer *JSONRenderer) render(output io.Writer, scanReport app.Report, firewall *jsonFirewall) error {
+// RenderWithDrift writes the report as JSON with an extra top-level drift
+// object (and a firewall object when a firewall report is given).
+func (renderer *JSONRenderer) RenderWithDrift(output io.Writer, scanReport app.Report, firewallReport *domain.FirewallReport, driftReport app.DriftReport) error {
+	var firewall *jsonFirewall
+	if firewallReport != nil {
+		firewall = toJSONFirewall(*firewallReport)
+	}
+	return renderer.render(output, scanReport, firewall, toJSONDrift(driftReport))
+}
+
+func (renderer *JSONRenderer) render(output io.Writer, scanReport app.Report, firewall *jsonFirewall, drift *jsonDrift) error {
 	document := jsonReport{
 		Findings:     make([]jsonFinding, 0, len(scanReport.Findings)),
 		Ports:        make([]jsonPort, 0, len(scanReport.Ports)),
 		SourceErrors: make([]jsonSourceError, 0, len(scanReport.SourceErrors)),
 		Firewall:     firewall,
+		Drift:        drift,
 	}
 	for _, finding := range scanReport.Findings {
 		document.Findings = append(document.Findings, jsonFinding{

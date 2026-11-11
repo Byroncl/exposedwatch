@@ -9,12 +9,15 @@ import (
 type ExitCode int
 
 // Exit codes. Scheme: 0 clean, 1 runtime failure, 2 bad usage, 3 findings
-// at or above --min-severity were found (lets cron/CI gate on it).
+// at or above --min-severity were found (lets cron/CI gate on it). With
+// "scan --baseline" code 3 is never used: 4 means new ports not present in
+// the baseline were found; a source that failed during the scan gives 1 unless 4 applies.
 const (
 	ExitOK           ExitCode = 0
 	ExitRuntimeError ExitCode = 1
 	ExitUsage        ExitCode = 2
 	ExitFindings     ExitCode = 3
+	ExitDrift        ExitCode = 4
 )
 
 // OutputFormat selects how a report is rendered.
@@ -75,7 +78,7 @@ const (
 // Flag descriptions.
 const (
 	usageFormat        = "output format: table or json"
-	usageMinSeverity   = "minimum severity to display and to trigger exit code 3: info, low, medium, high or critical"
+	usageMinSeverity   = "minimum severity to display and to trigger exit code 3 (exit code 4 with --baseline): info, low, medium, high or critical"
 	usageProcRoot      = "path of the proc filesystem"
 	usageDockerSocket  = "path of the Docker Engine unix socket"
 	usageNoDocker      = "skip Docker container discovery"
@@ -112,18 +115,22 @@ Commands:
   tui         interactive full-screen view that refreshes automatically (default)
   scan        one-shot report for scripts and cron (table or JSON);
               add --external to also scan from the network side with nmap,
-              add --firewall to show the host firewall verdict of each port
+              add --firewall to show the host firewall verdict of each port,
+              add --baseline FILE to report only drift (for cron)
+  baseline    "baseline save" records the ports exposed now as an accepted baseline
   watch       headless loop that sends Telegram alerts for new risky ports
               (this is the only feature that sends data to a third party)
   notify-test send one test message to the configured Telegram chat
   version     print the version
   help        show this help
 
-Run "exposedwatch tui -h", "exposedwatch scan -h", "exposedwatch watch -h" or
-"exposedwatch notify-test -h" for flags.
+Run "exposedwatch tui -h", "exposedwatch scan -h", "exposedwatch baseline save -h",
+"exposedwatch watch -h" or "exposedwatch notify-test -h" for flags.
 The tui accepts --interval, --theme auto|dark|light, --no-connections, --no-firewall
 and --config (the file edited by Settings > Telegram).
-Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
+Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found,
+4 drift found (only with scan --baseline, which never exits with 3; with it,
+1 also means a source could not be read, unless new ports give 4).
 `
 	versionFormat        = "exposedwatch %s"
 	scanFlagSetName      = "scan"

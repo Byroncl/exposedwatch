@@ -24,16 +24,22 @@ func NewTableRenderer(colorMode ColorMode) *TableRenderer {
 
 // Render writes the findings table, recommendations and failed sources.
 func (renderer *TableRenderer) Render(output io.Writer, scanReport app.Report) error {
-	return renderer.render(output, scanReport, nil)
+	return renderer.render(output, scanReport, nil, nil)
 }
 
 // RenderWithFirewall writes the same report with a FIREWALL column and a
 // closing Firewall section. The verdicts are information only.
 func (renderer *TableRenderer) RenderWithFirewall(output io.Writer, scanReport app.Report, firewallReport domain.FirewallReport) error {
-	return renderer.render(output, scanReport, &firewallReport)
+	return renderer.render(output, scanReport, &firewallReport, nil)
 }
 
-func (renderer *TableRenderer) render(output io.Writer, scanReport app.Report, firewallReport *domain.FirewallReport) error {
+// RenderWithDrift writes the report and, at the end, the drift section. The
+// firewall report is optional.
+func (renderer *TableRenderer) RenderWithDrift(output io.Writer, scanReport app.Report, firewallReport *domain.FirewallReport, driftReport app.DriftReport) error {
+	return renderer.render(output, scanReport, firewallReport, &driftReport)
+}
+
+func (renderer *TableRenderer) render(output io.Writer, scanReport app.Report, firewallReport *domain.FirewallReport, driftReport *app.DriftReport) error {
 	var builder strings.Builder
 	if len(scanReport.Findings) == 0 {
 		builder.WriteString(noFindingsText + newline)
@@ -45,6 +51,9 @@ func (renderer *TableRenderer) render(output io.Writer, scanReport app.Report, f
 	renderer.writeFailedSources(&builder, scanReport.SourceErrors)
 	if firewallReport != nil {
 		renderer.writeFirewallSection(&builder, *firewallReport)
+	}
+	if driftReport != nil {
+		renderer.writeDriftSection(&builder, *driftReport)
 	}
 	_, err := io.WriteString(output, builder.String())
 	return err
