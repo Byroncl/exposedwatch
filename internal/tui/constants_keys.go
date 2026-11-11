@@ -23,6 +23,7 @@ const (
 	keyChangesTab      = "3"
 	keyConnectionsTab  = "4"
 	keyLoopback        = "l"
+	keyInboundOnly     = "i"
 )
 
 // keyBinding documents one key for the help screen.
@@ -42,6 +43,7 @@ var keyBindings = []keyBinding{
 	{Keys: "f", Description: "cycle minimum severity filter; Findings and All ports only"},
 	{Keys: "/", Description: "free-text filter (enter apply, esc cancel); Connections: remote address, port, process"},
 	{Keys: "l", Description: "show or hide loopback-to-loopback connections; Connections"},
+	{Keys: "i", Description: "show only inbound connections, or all; Connections"},
 	{Keys: "?", Description: "toggle this help"},
 	{Keys: "q / ctrl+c", Description: "quit"},
 }
@@ -66,6 +68,7 @@ var footerHints = []footerHint{
 	{Text: hintSort, NeedsConnections: true, AppliesToTabs: [tabCount]bool{true, true, false, true}, DropRank: dropRankSort},
 	{Text: hintMinimum, AppliesToTabs: [tabCount]bool{true, true, false, false}, DropRank: dropRankMinimum},
 	{Text: hintFilter, NeedsConnections: true, AppliesToTabs: [tabCount]bool{true, true, false, true}, DropRank: dropRankFilter},
+	{Label: inboundHintText, NeedsConnections: true, AppliesToTabs: [tabCount]bool{false, false, false, true}, DropRank: dropRankInbound},
 	{Label: loopbackHintText, NeedsConnections: true, AppliesToTabs: [tabCount]bool{false, false, false, true}, DropRank: dropRankLoopback},
 	{Text: hintRefresh, AppliesToTabs: [tabCount]bool{true, true, true, true}, DropRank: dropRankRefresh},
 	{Text: hintHelp, AppliesToTabs: [tabCount]bool{true, true, true, true}, DropRank: dropRankNever},

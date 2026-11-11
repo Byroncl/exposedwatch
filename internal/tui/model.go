@@ -47,10 +47,11 @@ type Model struct {
 	connectionsErr        error
 	connectionTracker     connectionTracker
 	// connectionSummary and connectionDisplayCount describe the connections
-	// that pass the loopback toggle (and, for the count, the text filter).
+	// that pass the loopback and inbound-only toggles (and, for the count, the text filter).
 	connectionSummary      app.ConnectionSummary
 	connectionDisplayCount int
 	hideLoopback           bool
+	inboundOnly            bool
 	connectionSortMode     ConnectionSortMode
 	connectionFilterText   string
 

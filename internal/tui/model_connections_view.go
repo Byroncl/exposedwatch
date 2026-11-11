@@ -10,6 +10,19 @@ func (model Model) loopbackState() string {
 	return loopbackStateShown
 }
 
+// inboundState names whether only inbound connections are shown.
+func (model Model) inboundState() string {
+	if model.inboundOnly {
+		return inboundStateOnly
+	}
+	return inboundStateAll
+}
+
+// inboundHintText is the footer hint of the inbound-only toggle.
+func inboundHintText(model Model) string {
+	return fmt.Sprintf(inboundFooterFormat, model.inboundState())
+}
+
 // loopbackHintText is the footer hint of the loopback toggle.
 func loopbackHintText(model Model) string {
 	return fmt.Sprintf(loopbackFooterFormat, model.loopbackState())
@@ -42,6 +55,8 @@ func (model Model) connectionsEmptyMessage() string {
 		return connectionsReadingMessage
 	case model.connectionFilterText != "":
 		return noMatchMessage
+	case model.inboundOnly && len(model.connectionsPassingLoopbackToggle()) > 0:
+		return inboundOnlyEmptyMessage
 	case model.hideLoopback && len(model.connectionSnapshot.Connections) > 0:
 		return loopbackHiddenMessage
 	default:

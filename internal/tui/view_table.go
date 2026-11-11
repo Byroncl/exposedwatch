@@ -109,7 +109,7 @@ func (model Model) tablePanelTitle() string {
 	case TabChanges:
 		return position + panelChangesNote + columnSeparator
 	case TabConnections:
-		status = fmt.Sprintf(connectionStatusFormat, model.connectionSortMode, model.loopbackState())
+		status = fmt.Sprintf(connectionStatusFormat, model.connectionSortMode, model.loopbackState(), model.inboundState())
 	default:
 		status = fmt.Sprintf(panelStatusFormat, model.sortMode, model.minSeverity)
 	}
