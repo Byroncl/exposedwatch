@@ -23,6 +23,8 @@ func run(arguments []string, stdout, stderr io.Writer) ExitCode {
 	switch arguments[0] {
 	case commandScan:
 		return runScan(arguments[1:], stdout, stderr)
+	case commandTui:
+		return runTui(arguments[1:], stdout, stderr)
 	case commandVersion:
 		fmt.Fprintf(stdout, versionFormat, version)
 		return ExitOK

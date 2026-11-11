@@ -69,6 +69,27 @@ sudo exposedwatch scan --no-docker           # skip Docker discovery
 
 Severities: `info`, `low`, `medium`, `high`, `critical`.
 
+### Interactive TUI
+
+```sh
+sudo exposedwatch tui                  # full-screen view, refreshes every 2s
+sudo exposedwatch tui --interval 5s    # custom refresh interval (minimum 1s)
+sudo exposedwatch tui --no-docker      # skip Docker discovery
+```
+
+`tui` accepts `--proc-root`, `--docker-socket`, `--no-docker` and `--interval`. It needs an interactive terminal; otherwise it exits with code 2. A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
+
+| Key | Action |
+| --- | ------ |
+| `up` / `k`, `down` / `j` | Move selection |
+| `g` / `G` | Jump to top / bottom |
+| `r` | Refresh now |
+| `s` | Cycle sort: severity, port, process |
+| `f` | Cycle minimum severity filter |
+| `/` | Free-text filter (`enter` applies, `esc` cancels) |
+| `?` | Toggle help |
+| `q` / `ctrl+c` | Quit |
+
 Exit codes:
 
 | Code | Meaning |
@@ -91,11 +112,10 @@ exposedwatch scan --min-severity medium --format json > exposure.json || echo "e
 
 ## Status and roadmap
 
-Available now: `exposedwatch scan` (host ports and Docker containers, risk rules, table/JSON output, exit codes).
+Available now: `exposedwatch scan` (host ports and Docker containers, risk rules, table/JSON output, exit codes) and `exposedwatch tui` (interactive auto-refreshing view).
 
 Planned, **not yet available**:
 
-- Interactive terminal UI (TUI)
 - External scan with nmap
 - Signed apt repository
 
