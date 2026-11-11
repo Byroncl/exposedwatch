@@ -1,6 +1,7 @@
 # Markdown: ignore all except the public README
 *.md
 !README.md
+!README.es.md
 
 # Internal workflow and tooling
 odd/

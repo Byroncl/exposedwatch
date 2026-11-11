@@ -12,10 +12,35 @@ func runCommand(arguments ...string) (ExitCode, string, string) {
 	return code, stdout.String(), stderr.String()
 }
 
-func TestNoArgumentsIsUsageError(testRun *testing.T) {
+func TestNoArgumentsOpensTui(testRun *testing.T) {
+	// The test writer is not a terminal, so the tui refuses to start; reaching
+	// that refusal proves the empty command line was routed to the tui.
 	code, _, stderr := runCommand()
-	if code != ExitUsage || !strings.Contains(stderr, "Usage") {
+	if code != ExitUsage || !strings.Contains(stderr, "interactive terminal") {
 		testRun.Fatalf("code=%d stderr=%q", code, stderr)
+	}
+}
+
+func TestLeadingFlagsOpenTui(testRun *testing.T) {
+	code, _, stderr := runCommand("--interval", "5s")
+	if code != ExitUsage || !strings.Contains(stderr, "interactive terminal") {
+		testRun.Fatalf("code=%d stderr=%q", code, stderr)
+	}
+}
+
+func TestHelpFlagsPrintUsage(testRun *testing.T) {
+	for _, helpArgument := range []string{"-h", "--help", "help"} {
+		code, stdout, _ := runCommand(helpArgument)
+		if code != ExitOK || !strings.Contains(stdout, "Usage") {
+			testRun.Errorf("%s: code=%d stdout=%q", helpArgument, code, stdout)
+		}
+	}
+}
+
+func TestVersionFlag(testRun *testing.T) {
+	code, stdout, _ := runCommand("--version")
+	if code != ExitOK || !strings.Contains(stdout, version) {
+		testRun.Fatalf("code=%d stdout=%q", code, stdout)
 	}
 }
 
