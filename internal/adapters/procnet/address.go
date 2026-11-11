@@ -5,6 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"strconv"
+	"strings"
+
+	"github.com/Byroncl/exposedwatch/internal/domain"
 )
 
 // decodeAddress decodes the kernel hex form: each 32-bit word is printed in
@@ -26,4 +30,22 @@ func decodeAddress(addressHex string) (string, error) {
 		return "", errors.New(invalidAddressMessage)
 	}
 	return address.String(), nil
+}
+
+// decodeEndpoint decodes an "ADDRESS:PORT" column into a plain address and
+// port number. IPv4-mapped IPv6 addresses are normalized to IPv4.
+func decodeEndpoint(endpointColumn string) (string, int, error) {
+	addressHex, portHex, found := strings.Cut(endpointColumn, addressPortSeparator)
+	if !found {
+		return "", 0, errors.New(invalidEndpointMessage)
+	}
+	portNumber, err := strconv.ParseUint(portHex, hexadecimalBase, portBitSize)
+	if err != nil {
+		return "", 0, err
+	}
+	address, err := decodeAddress(addressHex)
+	if err != nil {
+		return "", 0, err
+	}
+	return domain.NormalizeAddress(address), int(portNumber), nil
 }

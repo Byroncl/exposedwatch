@@ -11,7 +11,8 @@ import (
 
 // Reader lists host ports from a proc tree.
 type Reader struct {
-	procRoot string
+	procRoot        string
+	connectionLimit int
 }
 
 // New returns a Reader for the given proc root. An empty root means
@@ -20,7 +21,7 @@ func New(procRoot string) *Reader {
 	if procRoot == "" {
 		procRoot = DefaultProcRoot
 	}
-	return &Reader{procRoot: procRoot}
+	return &Reader{procRoot: procRoot, connectionLimit: DefaultConnectionLimit}
 }
 
 // ListPorts returns listening TCP sockets and bound UDP sockets. Missing

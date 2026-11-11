@@ -45,9 +45,10 @@ const (
 
 // Tab titles.
 const (
-	tabTitleFindings = "Findings"
-	tabTitleAllPorts = "All ports"
-	tabTitleChanges  = "Changes"
+	tabTitleFindings    = "Findings"
+	tabTitleAllPorts    = "All ports"
+	tabTitleChanges     = "Changes"
+	tabTitleConnections = "Connections"
 )
 
 // Risk level words shown next to the gauge.

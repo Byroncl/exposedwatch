@@ -17,6 +17,17 @@ func scanCommand(scanner Scanner, clock func() time.Time) tea.Cmd {
 	}
 }
 
+// connectionsCommand reads the connections off the UI loop and reports them
+// as a message of their own.
+func connectionsCommand(source ConnectionSnapshotter, clock func() time.Time) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), connectionsTimeout)
+		defer cancel()
+		snapshot, err := source.Snapshot(ctx)
+		return ConnectionsResultMessage{Snapshot: snapshot, Err: err, At: clock()}
+	}
+}
+
 // tickCommand schedules the next auto-refresh tick.
 func tickCommand(interval time.Duration) tea.Cmd {
 	return tea.Tick(interval, func(time.Time) tea.Msg { return tickMessage{} })

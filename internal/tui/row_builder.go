@@ -9,6 +9,8 @@ func (model Model) buildRows(tab TabID) []displayRow {
 		return model.findingRows()
 	case TabAllPorts:
 		return model.portRows()
+	case TabConnections:
+		return model.connectionRows()
 	default:
 		return model.changeRows()
 	}

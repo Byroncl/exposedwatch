@@ -9,11 +9,12 @@ import (
 
 // rowKey identifies a row across refreshes so the selection can follow it.
 type rowKey struct {
-	ruleID    string
-	identity  app.PortIdentity
-	container string
-	kind      app.ChangeKind
-	changedAt time.Time
+	ruleID     string
+	identity   app.PortIdentity
+	container  string
+	kind       app.ChangeKind
+	changedAt  time.Time
+	connection app.ConnectionIdentity
 }
 
 // displayRow is one table row of any tab.
@@ -35,6 +36,11 @@ type displayRow struct {
 	isChange     bool
 	changeKind   app.ChangeKind
 	changedAt    time.Time
+
+	// connection and connectionAge are meaningful only when isConnection is true.
+	isConnection  bool
+	connection    domain.Connection
+	connectionAge time.Duration
 }
 
 // severityRank orders rows without a finding below every severity.

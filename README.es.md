@@ -55,31 +55,49 @@ Severidades: `info`, `low`, `medium`, `high`, `critical`.
 sudo exposedwatch                      # se actualiza cada 2 s
 sudo exposedwatch --interval 5s        # intervalo personalizado (mínimo 1s)
 sudo exposedwatch --no-docker          # omite el descubrimiento de Docker
+sudo exposedwatch --no-connections     # desactiva la pestaña Connections
 sudo exposedwatch --theme light        # fuerza la paleta para terminales claras
 ```
 
-Opciones: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--theme auto|dark|light` (por defecto `auto`, que detecta el fondo de la terminal). Requiere una terminal interactiva; de lo contrario termina con código 2 (usa `scan`). Si una fuente falla (por ejemplo, Docker no disponible), se muestra como una línea de advertencia y la vista continúa.
+Opciones: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--theme auto|dark|light` (por defecto `auto`, que detecta el fondo de la terminal). Requiere una terminal interactiva; de lo contrario termina con código 2 (usa `scan`). Si una fuente falla (por ejemplo, Docker no disponible), se muestra como una línea de advertencia y la vista continúa.
 
-La cabecera muestra los conteos por severidad, un indicador de riesgo global (`SAFE`, `LOW`, `MEDIUM`, `HIGH` o `CRITICAL`, según la mayor severidad presente), el número de puertos por fuente y los contadores `+N new -M closed`. Tres pestañas comparten la pantalla:
+La cabecera muestra los conteos por severidad, un indicador de riesgo global (`SAFE`, `LOW`, `MEDIUM`, `HIGH` o `CRITICAL`, según la mayor severidad presente), el número de puertos por fuente y los contadores `+N new -M closed`. Cuando el ancho lo permite, la cabecera también muestra `conn N (in X / out Y)`. Cuatro pestañas comparten la pantalla:
 
 - **Findings** (`1`): una fila por hallazgo.
 - **All ports** (`2`): todos los puertos, con su severidad o `-` cuando ninguna regla aplica.
 - **Changes** (`3`): registro de los puertos que se abrieron o cerraron desde que arrancó la vista, del más reciente al más antiguo (se conservan las últimas 200 entradas).
+- **Connections** (`4`): quién está conectado a este servidor en este momento (ver más abajo).
 
 El primer escaneo exitoso es la línea base: no se marca nada. Tras cada actualización posterior, los puertos que se abrieron reciben la marca `NEW` durante 5 actualizaciones y una entrada en el registro; los que se cerraron generan una entrada con su última severidad conocida. `+N new -M closed` cuenta estos eventos desde que arrancó la vista. Una actualización fallida, o una fuente que falla durante una actualización, nunca genera eventos `closed`: se conservan los datos previos de esa fuente. El registro vive solo en memoria y se pierde al salir. Un panel de detalle muestra la regla, la recomendación, la dirección de enlace, el proceso o contenedor y cuándo vio esta sesión por primera vez el puerto seleccionado.
 
 | Tecla | Acción |
 | ----- | ------ |
 | `tab` / `shift+tab` | Pestaña siguiente / anterior |
-| `1` / `2` / `3` | Ir a Findings / All ports / Changes |
+| `1` / `2` / `3` / `4` | Ir a Findings / All ports / Changes / Connections |
 | `up` / `k`, `down` / `j` | Mover la selección |
 | `g` / `G` | Ir al inicio / al final |
 | `r` | Actualizar ahora |
-| `s` | Cambiar el orden: severidad, puerto, proceso (Findings y All ports) |
-| `f` | Cambiar el filtro de severidad mínima (Findings y All ports) |
-| `/` | Filtro de texto libre (`enter` aplica, `esc` cancela; Findings y All ports) |
+| `s` | Cambiar el orden: severidad, puerto, proceso (Findings y All ports); dirección, puerto local, dirección remota, proceso, antigüedad (Connections) |
+| `f` | Cambiar el filtro de severidad mínima (Findings y All ports; se ignora en Connections) |
+| `/` | Filtro de texto libre (`enter` aplica, `esc` cancela; en Connections busca en dirección remota, puerto remoto y proceso) |
+| `l` | Mostrar u ocultar las conexiones de loopback a loopback (Connections; ocultas por defecto) |
 | `?` | Mostrar u ocultar la ayuda |
 | `q` / `ctrl+c` | Salir |
+
+### Pestaña Connections
+
+La pestaña Connections lista las conexiones TCP establecidas de este equipo, leídas de `/proc/net/tcp` y `/proc/net/tcp6` en cada actualización. Cada fila muestra la dirección (`IN` cuando el puerto local es uno en el que este equipo escucha, `OUT` en caso contrario), el puerto local (y la dirección de enlace cuando hay espacio), la `dirección:puerto` remota, el estado, el proceso (`-` si se desconoce) y la antigüedad: cuánto tiempo lleva esta sesión viendo esa conexión (`12s`, `4m`, `1h`, `2d`). Las conexiones entrantes que aparecieron desde la actualización anterior reciben la marca `NEW` durante 5 actualizaciones; la primera lectura es la línea base y no marca nada. Las filas se ordenan primero las entrantes y luego por puerto local y dirección remota.
+
+Las conexiones de loopback a loopback (servicios locales que hablan entre sí) están ocultas por defecto porque son ruido; pulsa `l` para mostrarlas. El título y el pie indican si están ocultas. Bajo la tabla, dos paneles listan las direcciones remotas más activas y el número de conexiones entrantes por puerto local, calculados con las mismas conexiones que la tabla (por eso siguen a `l`). Una lectura fallida conserva las filas anteriores y muestra una línea de advertencia; nunca retrasa el escaneo de puertos, que se actualiza de forma independiente. Si el número de conexiones alcanza el límite del lector, un aviso indica cuántas se leyeron.
+
+Todo permanece en memoria: las direcciones remotas solo se muestran en pantalla, nunca se escriben en disco ni se registran, y no se resuelven por DNS.
+
+Limitaciones:
+
+- Las conexiones se muestrean en cada actualización, por lo que las conexiones de muy corta duración entre dos actualizaciones pueden no verse.
+- Solo se leen los sockets propios del equipo. Las conexiones a puertos publicados por Docker que el kernel gestiona mediante NAT pueden no aparecer.
+- Los nombres de proceso requieren `sudo` (root), igual que la columna de proceso de las pestañas de puertos.
+- Solo se listan conexiones TCP establecidas; UDP no se incluye.
 
 ## Scripts, cron y CI: `scan`
 

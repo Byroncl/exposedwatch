@@ -24,4 +24,6 @@ var (
 	colorClosed     = lipgloss.AdaptiveColor{Light: "28", Dark: "42"}
 	colorTabActive  = lipgloss.AdaptiveColor{Light: "25", Dark: "81"}
 	colorHeadingRow = lipgloss.AdaptiveColor{Light: "238", Dark: "250"}
+	colorInbound    = lipgloss.AdaptiveColor{Light: "166", Dark: "209"}
+	colorOutbound   = lipgloss.AdaptiveColor{Light: "31", Dark: "75"}
 )
