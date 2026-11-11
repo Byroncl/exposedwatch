@@ -46,6 +46,8 @@ func tableSpecFor(tab TabID) tableSpec {
 		return changesSpec()
 	case TabConnections:
 		return connectionsSpec()
+	case TabFirewallPorts:
+		return firewallPortsSpec()
 	default:
 		return portsSpec()
 	}
@@ -61,6 +63,7 @@ func portsSpec() tableSpec {
 			{headingBind, bindColumnWidth, priorityBind, 0, bindCell},
 			{headingSource, sourceColumnWidth, prioritySource, 0, sourceCell},
 			{headingProcessShort, processColumnWidth, priorityProcess, 0, processCell},
+			{headingFirewallShort, firewallColumnWidth, priorityFirewall, 0, firewallVerdictCell},
 		},
 		flexHeading:  headingFinding,
 		flexContent:  findingTitleCell,

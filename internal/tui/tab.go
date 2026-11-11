@@ -14,6 +14,7 @@ const (
 	TabFirewall
 	TabAlerts
 	TabSettings
+	TabFirewallPorts
 )
 
 // Title returns the display name of the view.
@@ -31,6 +32,8 @@ func (tab TabID) Title() string {
 		return tabTitleTopRemote
 	case TabFirewall:
 		return moduleTitleFirewall
+	case TabFirewallPorts:
+		return firewallPortsTitleText
 	case TabAlerts:
 		return moduleTitleAlerts
 	case TabSettings:
@@ -43,7 +46,7 @@ func (tab TabID) Title() string {
 // isTable tells whether the view is a table of rows with a cursor.
 func (tab TabID) isTable() bool {
 	switch tab {
-	case TabFindings, TabAllPorts, TabChanges, TabConnections:
+	case TabFindings, TabAllPorts, TabChanges, TabConnections, TabFirewallPorts:
 		return true
 	default:
 		return false
@@ -56,6 +59,11 @@ func (tab TabID) usesConnections() bool {
 	return tab == TabConnections || tab == TabTopRemote
 }
 
+// usesFirewall tells whether the view shows firewall data.
+func (tab TabID) usesFirewall() bool {
+	return tab == TabFirewall || tab == TabFirewallPorts
+}
+
 // supportsMinimumSeverity tells whether the minimum severity filter applies.
 func (tab TabID) supportsMinimumSeverity() bool {
 	return tab == TabFindings || tab == TabAllPorts
@@ -63,5 +71,5 @@ func (tab TabID) supportsMinimumSeverity() bool {
 
 // supportsSortAndSearch tells whether sort and free-text search apply.
 func (tab TabID) supportsSortAndSearch() bool {
-	return tab == TabFindings || tab == TabAllPorts || tab == TabConnections
+	return tab == TabFindings || tab == TabAllPorts || tab == TabConnections || tab == TabFirewallPorts
 }

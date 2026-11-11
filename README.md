@@ -56,10 +56,11 @@ sudo exposedwatch                      # refreshes every 2s
 sudo exposedwatch --interval 5s        # custom refresh interval (minimum 1s)
 sudo exposedwatch --no-docker          # skip Docker discovery
 sudo exposedwatch --no-connections     # disable the Connections module
+sudo exposedwatch --no-firewall        # disable the Firewall module (no firewall reads)
 sudo exposedwatch --theme light        # force the palette for light terminals
 ```
 
-Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--theme auto|dark|light` (default `auto`, which detects the terminal background). It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
+Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--no-firewall`, `--theme auto|dark|light` (default `auto`, which detects the terminal background). It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
 
 The header shows the severity counts, an overall risk gauge (`SAFE`, `LOW`, `MEDIUM`, `HIGH` or `CRITICAL`, driven by the highest severity present), the number of ports per source and the `+N new -M closed` counters. The header also shows `conn N (in X / out Y)` when the width allows it. On the Overview the header is just the title, because the Overview shows those numbers itself.
 
@@ -70,13 +71,13 @@ The screen has a sidebar of modules on the left and, on the right, the tabs of t
 | Overview | Summary | Overall risk gauge, severity counts, counters, the 5 worst findings, the last 5 changes and the top 3 remote addresses (inbound, only when connections are enabled) |
 | Ports | Findings, All ports, Changes | `Findings`: one row per finding. `All ports`: every port, with its severity or `-` when no rule matched. `Changes`: a log of ports that opened or closed since the view started, newest first (the last 200 entries are kept) |
 | Connections | Live, Top remote | `Live`: who is connected to this server right now (see below). `Top remote`: the busiest inbound remote addresses and the inbound count per local port, full size |
-| Firewall | - | Not available yet (placeholder) |
+| Firewall | Status, Ports | Which listening ports the host firewall lets through, as information only (see [Firewall verdicts](#firewall-verdicts)). `Status`: backend, whether the rules could be read, the notes of the engine, a count per verdict, when it was last evaluated and what each verdict means. `Ports`: one row per host or Docker port with its verdict, most worrying first |
 | Alerts | - | Not available yet (placeholder) |
 | Settings | - | Not available yet (placeholder); it only shows the current theme, refresh interval and whether connections are enabled, read-only |
 
-The view starts on Ports, Findings. Each module remembers the tab you last used in it. Firewall, Alerts and Settings only say what they are planned to do; nothing in them works yet.
+The view starts on Ports, Findings. Each module remembers the tab you last used in it. Alerts and Settings only say what they are planned to do; nothing in them works yet.
 
-The sidebar adapts to the terminal width: full (module names with a count or flag, for example the number of findings and `NEW` on Ports, the connection count on Connections, `off` on Alerts) from 80 columns, compact (one letter per module) from 50 to 79 columns, and hidden below 50. `b` hides or shows it on top of that. Nothing is drawn outside the terminal at any size.
+The sidebar adapts to the terminal width: full (module names with a count or flag, for example the number of findings and `NEW` on Ports, the connection count on Connections, the number of ports the firewall allows or restricts on Firewall (`n/a` when the rules cannot be read, `off` with `--no-firewall`), `off` on Alerts) from 80 columns, compact (one letter per module) from 50 to 79 columns, and hidden below 50. `b` hides or shows it on top of that. Nothing is drawn outside the terminal at any size.
 
 The first successful scan is the baseline: nothing is flagged. After each later refresh, ports that opened get a `NEW` badge for 5 refreshes and a log entry; ports that closed get a log entry with their last known severity. `+N new -M closed` counts these events since the view started. A refresh that fails, or a source that fails during a refresh, never produces `closed` events: the previous data of that source is kept. The log lives only in memory and is lost when the view exits. A detail panel shows the rule, recommendation, bind address, process or container and when this session first saw the selected port.
 
@@ -84,14 +85,14 @@ The first successful scan is the baseline: nothing is flagged. After each later 
 | --- | ------ |
 | `tab` / `shift+tab` | Next / previous module |
 | `]` / `[` | Next / previous tab of the current module |
-| `1` to `9` | Jump to that tab of the current module (Ports: Findings / All ports / Changes; Connections: Live / Top remote) |
+| `1` to `9` | Jump to that tab of the current module (Ports: Findings / All ports / Changes; Connections: Live / Top remote; Firewall: Status / Ports) |
 | `b` | Show or hide the sidebar |
 | `up` / `k`, `down` / `j` | Move selection (tables) |
 | `g` / `G` | Jump to top / bottom (tables) |
-| `r` | Refresh now |
-| `s` | Cycle sort: severity, port, process (Findings and All ports); direction, local port, remote address, process, age (Connections / Live) |
+| `r` | Refresh now (also re-reads the firewall rules) |
+| `s` | Cycle sort: severity, port, process (Findings and All ports); direction, local port, remote address, process, age (Connections / Live); verdict, port, process (Firewall / Ports) |
 | `f` | Cycle minimum severity filter (Findings and All ports only) |
-| `/` | Free-text filter (`enter` applies, `esc` cancels; on Connections / Live it matches remote address, remote port and process) |
+| `/` | Free-text filter (`enter` applies, `esc` cancels; on Connections / Live it matches remote address, remote port and process; on Firewall / Ports it matches port, process, verdict and reason) |
 | `l` | Show or hide loopback-to-loopback connections (Connections: Live and Top remote; hidden by default) |
 | `i` | Show only inbound connections, or all of them (Connections: Live and Top remote; all shown by default) |
 | `?` | Toggle help |
@@ -129,6 +130,20 @@ Limitations:
 - Process names need `sudo` (root), as for the process column of the port tabs.
 - Only established TCP connections are listed; UDP is not.
 
+### Firewall verdicts
+
+The Firewall module, and a `Firewall:` line in the details of the port tables, say whether the host firewall would let a NEW inbound connection from an external source reach each listening port: `allowed`, `restricted` (only some source addresses), `blocked`, `unknown` (could not be determined), `not-exposed` (loopback only) or `docker` (published by Docker, which usually bypasses the INPUT and ufw rules, so it is never reported as blocked). The Ports tables also have a low-priority `FW` column that is the first one dropped when the terminal is narrow, and the Overview has a one-line summary. Verdicts are **informational**: they never change a severity, a finding or an exit code.
+
+The rules are read in the background with their own timeout: after the first scan, on `r`, when the set of listening ports changes and otherwise at most every 30 seconds (`iptables-save` is not free), independently from the refresh interval. A failed read keeps the previous data and shows a warning on the Firewall views. Without root the module is simply `n/a`: every exposed port is `unknown` and the notes say why. `--no-firewall` turns the module off and the firewall is never read.
+
+#### Limitations
+
+- It needs root: without it the rules cannot be read and every exposed port is `unknown`.
+- It reads `iptables-save` and `ip6tables-save` (found in `/usr/sbin` and `/sbin`, which are not in a normal user's `PATH`). That covers ufw, plain iptables and the iptables-nft shim. Hosts that only use native nftables are reported as `unknown`; a hand-made native `table ip filter` is not detected.
+- Docker-published ports are labelled `docker`, never `blocked`.
+- A verdict is an estimate for a new inbound connection from an external source. Anything the engine does not understand makes the verdict `unknown`.
+- It was validated against fixtures only, not against real rule sets on real machines.
+
 ## Scripts, cron and CI: `scan`
 
 ```sh
@@ -136,6 +151,7 @@ sudo exposedwatch scan                       # table output
 sudo exposedwatch scan --format json         # machine-readable output
 sudo exposedwatch scan --min-severity medium # show and gate on medium and above
 sudo exposedwatch scan --no-docker           # skip Docker discovery
+sudo exposedwatch scan --firewall            # also show the firewall verdict of each port
 ```
 
 Example output:
@@ -151,6 +167,8 @@ Recommendations
 
 54 port(s) scanned, 2 finding(s).
 ```
+
+`--firewall` is opt-in. It adds a `FIREWALL` column with the verdict word of each port and a short `Firewall` section with the backend, whether the rules could be read and the notes of the engine; with `--format json` it adds a top-level `firewall` object (`available`, `backend`, `notes` and `ports` with `port`, `protocol`, `bind_address`, `source`, `verdict` and `reason`; the Docker verdict is `docker-published` in JSON). Not being able to read the firewall (not root, no tool) is not an error: the section says so and every exposed port is `unknown`. Verdicts are informational: severities and exit codes are exactly the same with and without `--firewall`. See the [limitations](#limitations).
 
 Exit codes (shared by all commands):
 

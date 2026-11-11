@@ -75,22 +75,31 @@ func TestLayoutPreview(testRun *testing.T) {
 		width  int
 		height int
 		keys   []string
+		// needsRoot shows the firewall as it looks when the rules cannot be read.
+		needsRoot bool
 	}{
-		{"overview", 110, 28, []string{"shift+tab"}},
-		{"ports / findings", 110, 28, nil},
-		{"ports / all ports", 110, 28, []string{"2"}},
-		{"ports / changes", 110, 28, []string{"3"}},
-		{"connections / live", 110, 28, []string{"tab"}},
-		{"connections / top remote", 110, 28, []string{"tab", "2"}},
-		{"firewall (placeholder)", 110, 28, []string{"tab", "tab"}},
-		{"ports / findings compact sidebar", 70, 20, nil},
-		{"ports / findings compact sidebar (lowest width)", 50, 16, nil},
-		{"ports / findings hidden sidebar", 49, 16, nil},
-		{"ports / findings hidden sidebar", 40, 12, nil},
-		{"connections / live compact sidebar", 70, 20, []string{"tab"}},
+		{"overview", 110, 28, []string{"shift+tab"}, false},
+		{"ports / findings", 110, 28, nil, false},
+		{"ports / all ports", 110, 28, []string{"2"}, false},
+		{"ports / changes", 110, 28, []string{"3"}, false},
+		{"connections / live", 110, 28, []string{"tab"}, false},
+		{"connections / top remote", 110, 28, []string{"tab", "2"}, false},
+		{"firewall / status", 110, 28, []string{"tab", "tab"}, false},
+		{"firewall / ports", 110, 28, []string{"tab", "tab", "2"}, false},
+		{"firewall / ports compact sidebar", 70, 20, []string{"tab", "tab", "2"}, false},
+		{"firewall / status unavailable (needs root)", 110, 28, []string{"tab", "tab"}, true},
+		{"ports / findings compact sidebar", 70, 20, nil, false},
+		{"ports / findings compact sidebar (lowest width)", 50, 16, nil, false},
+		{"ports / findings hidden sidebar", 49, 16, nil, false},
+		{"ports / findings hidden sidebar", 40, 12, nil, false},
+		{"connections / live compact sidebar", 70, 20, []string{"tab"}, false},
 	}
 	for _, preview := range previews {
-		sized := applyMessage(testRun, model, tea.WindowSizeMsg{Width: preview.width, Height: preview.height})
+		base := model
+		if preview.needsRoot {
+			base = applyMessage(testRun, model, FirewallResultMessage{Report: previewUnavailableFirewallReport(), At: timeAfter(3)})
+		}
+		sized := applyMessage(testRun, base, tea.WindowSizeMsg{Width: preview.width, Height: preview.height})
 		sized = typeKeys(testRun, sized, preview.keys...)
 		assertRendersWithin(testRun, sized, preview.width, preview.height)
 		if testing.Verbose() {

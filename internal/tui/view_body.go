@@ -23,7 +23,9 @@ func (model Model) contentPanels(frame layout) []string {
 		return model.overviewPanel(frame)
 	case TabTopRemote:
 		return model.topRemoteView(frame)
-	case TabFirewall, TabAlerts, TabSettings:
+	case TabFirewall:
+		return model.firewallStatusPanel(frame)
+	case TabAlerts, TabSettings:
 		return model.placeholderPanel(frame)
 	default:
 		panels := model.tablePanel(frame)

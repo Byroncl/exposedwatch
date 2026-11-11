@@ -47,14 +47,27 @@ type jsonReport struct {
 	Findings     []jsonFinding     `json:"findings"`
 	Ports        []jsonPort        `json:"ports"`
 	SourceErrors []jsonSourceError `json:"source_errors"`
+	// Firewall is only present when the report was rendered with firewall verdicts.
+	Firewall *jsonFirewall `json:"firewall,omitempty"`
 }
 
 // Render writes the report as JSON.
 func (renderer *JSONRenderer) Render(output io.Writer, scanReport app.Report) error {
+	return renderer.render(output, scanReport, nil)
+}
+
+// RenderWithFirewall writes the report as JSON with an extra top-level
+// firewall object.
+func (renderer *JSONRenderer) RenderWithFirewall(output io.Writer, scanReport app.Report, firewallReport domain.FirewallReport) error {
+	return renderer.render(output, scanReport, toJSONFirewall(firewallReport))
+}
+
+func (renderer *JSONRenderer) render(output io.Writer, scanReport app.Report, firewall *jsonFirewall) error {
 	document := jsonReport{
 		Findings:     make([]jsonFinding, 0, len(scanReport.Findings)),
 		Ports:        make([]jsonPort, 0, len(scanReport.Ports)),
 		SourceErrors: make([]jsonSourceError, 0, len(scanReport.SourceErrors)),
+		Firewall:     firewall,
 	}
 	for _, finding := range scanReport.Findings {
 		document.Findings = append(document.Findings, jsonFinding{

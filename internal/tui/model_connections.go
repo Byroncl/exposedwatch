@@ -13,6 +13,9 @@ func (model Model) acceptsSortAndSearch() bool {
 	if model.activeTab == TabConnections && !model.connectionsEnabled() {
 		return false
 	}
+	if model.activeTab == TabFirewallPorts && !model.firewallEnabled() {
+		return false
+	}
 	return model.activeTab.supportsSortAndSearch()
 }
 

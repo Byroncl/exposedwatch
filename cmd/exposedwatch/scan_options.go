@@ -17,6 +17,8 @@ type ScanOptions struct {
 	ProcRoot     string
 	DockerSocket string
 	NoDocker     bool
+	// Firewall adds the firewall verdicts of the listening ports (information only).
+	Firewall bool
 
 	External         bool
 	ExternalTargets  nmapscan.TargetList
@@ -37,6 +39,7 @@ func parseScanOptions(arguments []string, errorOutput io.Writer) (ScanOptions, e
 	flagSet.StringVar(&options.ProcRoot, flagProcRoot, defaultProcRoot, usageProcRoot)
 	flagSet.StringVar(&options.DockerSocket, flagDockerSocket, defaultDockerSock, usageDockerSocket)
 	flagSet.BoolVar(&options.NoDocker, flagNoDocker, false, usageNoDocker)
+	flagSet.BoolVar(&options.Firewall, flagFirewall, false, usageFirewall)
 	flagSet.BoolVar(&options.External, flagExternal, false, usageExternal)
 	var rawTargets stringListFlag
 	flagSet.Var(&rawTargets, flagExternalTarget, usageExternalTarget)

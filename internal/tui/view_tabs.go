@@ -19,6 +19,8 @@ func (model Model) viewCount(view TabID) (int, bool) {
 		return len(model.tracker.log), true
 	case TabConnections:
 		return model.connectionDisplayCount, true
+	case TabFirewallPorts:
+		return len(model.firewallReport.Findings), model.hasFirewall
 	default:
 		return 0, false
 	}

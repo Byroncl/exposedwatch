@@ -56,10 +56,11 @@ sudo exposedwatch                      # se actualiza cada 2 s
 sudo exposedwatch --interval 5s        # intervalo personalizado (mínimo 1s)
 sudo exposedwatch --no-docker          # omite el descubrimiento de Docker
 sudo exposedwatch --no-connections     # desactiva el módulo Connections
+sudo exposedwatch --no-firewall        # desactiva el módulo Firewall (no se lee el firewall)
 sudo exposedwatch --theme light        # fuerza la paleta para terminales claras
 ```
 
-Opciones: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--theme auto|dark|light` (por defecto `auto`, que detecta el fondo de la terminal). Requiere una terminal interactiva; de lo contrario termina con código 2 (usa `scan`). Si una fuente falla (por ejemplo, Docker no disponible), se muestra como una línea de advertencia y la vista continúa.
+Opciones: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--no-firewall`, `--theme auto|dark|light` (por defecto `auto`, que detecta el fondo de la terminal). Requiere una terminal interactiva; de lo contrario termina con código 2 (usa `scan`). Si una fuente falla (por ejemplo, Docker no disponible), se muestra como una línea de advertencia y la vista continúa.
 
 La cabecera muestra los conteos por severidad, un indicador de riesgo global (`SAFE`, `LOW`, `MEDIUM`, `HIGH` o `CRITICAL`, según la mayor severidad presente), el número de puertos por fuente y los contadores `+N new -M closed`. Cuando el ancho lo permite, la cabecera también muestra `conn N (in X / out Y)`. En Overview la cabecera es solo el título, porque Overview ya muestra esos números.
 
@@ -70,13 +71,13 @@ La pantalla tiene a la izquierda una barra lateral con módulos y, a la derecha,
 | Overview | Summary | Indicador de riesgo global, conteos por severidad, contadores, los 5 peores hallazgos, los últimos 5 cambios y las 3 direcciones remotas principales (entrantes, solo cuando las conexiones están activadas) |
 | Ports | Findings, All ports, Changes | `Findings`: una fila por hallazgo. `All ports`: todos los puertos, con su severidad o `-` cuando ninguna regla aplica. `Changes`: registro de los puertos que se abrieron o cerraron desde que arrancó la vista, del más reciente al más antiguo (se conservan las últimas 200 entradas) |
 | Connections | Live, Top remote | `Live`: quién está conectado a este servidor en este momento (ver más abajo). `Top remote`: las direcciones remotas entrantes más activas y el número de conexiones entrantes por puerto local, a tamaño completo |
-| Firewall | - | Aún no disponible (marcador de posición) |
+| Firewall | Status, Ports | Qué puertos en escucha deja pasar el firewall del host, solo como información (ver [Veredictos del firewall](#veredictos-del-firewall)). `Status`: el backend, si se pudieron leer las reglas, las notas del motor, un conteo por veredicto, cuándo se evaluó por última vez y qué significa cada veredicto. `Ports`: una fila por puerto del host o de Docker con su veredicto, los más preocupantes primero |
 | Alerts | - | Aún no disponible (marcador de posición) |
 | Settings | - | Aún no disponible (marcador de posición); solo muestra, en modo lectura, el tema, el intervalo de actualización y si las conexiones están activadas |
 
-La vista arranca en Ports, Findings. Cada módulo recuerda la última pestaña que usaste en él. Firewall, Alerts y Settings solo indican lo que se prevé que hagan; todavía no funciona nada en ellos.
+La vista arranca en Ports, Findings. Cada módulo recuerda la última pestaña que usaste en él. Alerts y Settings solo indican lo que se prevé que hagan; todavía no funciona nada en ellos.
 
-La barra lateral se adapta al ancho de la terminal: completa (nombres de módulo con un conteo o marca, por ejemplo el número de hallazgos y `NEW` en Ports, el número de conexiones en Connections y `off` en Alerts) desde 80 columnas, compacta (una letra por módulo) de 50 a 79 columnas, y oculta por debajo de 50. `b` la oculta o la muestra además de lo anterior. Nada se dibuja fuera de la terminal, sea cual sea el tamaño.
+La barra lateral se adapta al ancho de la terminal: completa (nombres de módulo con un conteo o marca, por ejemplo el número de hallazgos y `NEW` en Ports, el número de conexiones en Connections, el número de puertos que el firewall permite o restringe en Firewall (`n/a` cuando no se pueden leer las reglas, `off` con `--no-firewall`) y `off` en Alerts) desde 80 columnas, compacta (una letra por módulo) de 50 a 79 columnas, y oculta por debajo de 50. `b` la oculta o la muestra además de lo anterior. Nada se dibuja fuera de la terminal, sea cual sea el tamaño.
 
 El primer escaneo exitoso es la línea base: no se marca nada. Tras cada actualización posterior, los puertos que se abrieron reciben la marca `NEW` durante 5 actualizaciones y una entrada en el registro; los que se cerraron generan una entrada con su última severidad conocida. `+N new -M closed` cuenta estos eventos desde que arrancó la vista. Una actualización fallida, o una fuente que falla durante una actualización, nunca genera eventos `closed`: se conservan los datos previos de esa fuente. El registro vive solo en memoria y se pierde al salir. Un panel de detalle muestra la regla, la recomendación, la dirección de enlace, el proceso o contenedor y cuándo vio esta sesión por primera vez el puerto seleccionado.
 
@@ -84,14 +85,14 @@ El primer escaneo exitoso es la línea base: no se marca nada. Tras cada actuali
 | ----- | ------ |
 | `tab` / `shift+tab` | Módulo siguiente / anterior |
 | `]` / `[` | Pestaña siguiente / anterior del módulo actual |
-| `1` a `9` | Ir a esa pestaña del módulo actual (Ports: Findings / All ports / Changes; Connections: Live / Top remote) |
+| `1` a `9` | Ir a esa pestaña del módulo actual (Ports: Findings / All ports / Changes; Connections: Live / Top remote; Firewall: Status / Ports) |
 | `b` | Mostrar u ocultar la barra lateral |
 | `up` / `k`, `down` / `j` | Mover la selección (tablas) |
 | `g` / `G` | Ir al inicio / al final (tablas) |
-| `r` | Actualizar ahora |
-| `s` | Cambiar el orden: severidad, puerto, proceso (Findings y All ports); dirección, puerto local, dirección remota, proceso, antigüedad (Connections / Live) |
+| `r` | Actualizar ahora (también vuelve a leer las reglas del firewall) |
+| `s` | Cambiar el orden: severidad, puerto, proceso (Findings y All ports); dirección, puerto local, dirección remota, proceso, antigüedad (Connections / Live); veredicto, puerto, proceso (Firewall / Ports) |
 | `f` | Cambiar el filtro de severidad mínima (solo Findings y All ports) |
-| `/` | Filtro de texto libre (`enter` aplica, `esc` cancela; en Connections / Live busca en dirección remota, puerto remoto y proceso) |
+| `/` | Filtro de texto libre (`enter` aplica, `esc` cancela; en Connections / Live busca en dirección remota, puerto remoto y proceso; en Firewall / Ports busca en puerto, proceso, veredicto y motivo) |
 | `l` | Mostrar u ocultar las conexiones de loopback a loopback (Connections: Live y Top remote; ocultas por defecto) |
 | `i` | Mostrar solo las conexiones entrantes, o todas (Connections: Live y Top remote; por defecto se muestran todas) |
 | `?` | Mostrar u ocultar la ayuda |
@@ -129,6 +130,20 @@ Limitaciones:
 - Los nombres de proceso requieren `sudo` (root), igual que la columna de proceso de las pestañas de puertos.
 - Solo se listan conexiones TCP establecidas; UDP no se incluye.
 
+### Veredictos del firewall
+
+El módulo Firewall, y una línea `Firewall:` en el detalle de las tablas de puertos, indican si el firewall del host dejaría pasar una conexión entrante NUEVA desde un origen externo hasta cada puerto en escucha: `allowed` (permitido), `restricted` (solo algunas direcciones de origen), `blocked` (bloqueado), `unknown` (no se pudo determinar), `not-exposed` (solo loopback) o `docker` (publicado por Docker, que normalmente salta las reglas INPUT y ufw, por lo que nunca se informa como bloqueado). Las tablas de Ports también tienen una columna `FW` de baja prioridad, la primera en descartarse cuando la terminal es estrecha, y Overview incluye un resumen de una línea. Los veredictos son **informativos**: nunca cambian una severidad, un hallazgo ni un código de salida.
+
+Las reglas se leen en segundo plano con su propio límite de tiempo: tras el primer escaneo, con `r`, cuando cambia el conjunto de puertos en escucha y, en los demás casos, como máximo cada 30 segundos (`iptables-save` no es gratuito), con independencia del intervalo de actualización. Una lectura fallida conserva los datos anteriores y muestra una advertencia en las vistas de Firewall. Sin root el módulo queda en `n/a`: todos los puertos expuestos son `unknown` y las notas explican el motivo. `--no-firewall` desactiva el módulo y el firewall nunca se lee.
+
+#### Limitaciones
+
+- Requiere root: sin él no se pueden leer las reglas y todos los puertos expuestos son `unknown`.
+- Lee `iptables-save` y `ip6tables-save` (en `/usr/sbin` y `/sbin`, que no están en el `PATH` de un usuario normal). Esto cubre ufw, iptables puro y la capa de compatibilidad iptables-nft. Los equipos que solo usan nftables nativo se informan como `unknown`; una `table ip filter` nativa creada a mano no se detecta.
+- Los puertos publicados por Docker se etiquetan como `docker`, nunca como `blocked`.
+- Un veredicto es una estimación para una conexión entrante nueva desde un origen externo. Todo lo que el motor no entiende deja el veredicto en `unknown`.
+- Se validó únicamente con datos de prueba (fixtures), no con conjuntos de reglas reales en equipos reales.
+
 ## Scripts, cron y CI: `scan`
 
 ```sh
@@ -136,6 +151,7 @@ sudo exposedwatch scan                       # salida en tabla
 sudo exposedwatch scan --format json         # salida legible por máquinas
 sudo exposedwatch scan --min-severity medium # muestra y evalúa desde medium en adelante
 sudo exposedwatch scan --no-docker           # omite el descubrimiento de Docker
+sudo exposedwatch scan --firewall            # muestra también el veredicto del firewall de cada puerto
 ```
 
 Ejemplo de salida:
@@ -151,6 +167,8 @@ Recommendations
 
 54 port(s) scanned, 2 finding(s).
 ```
+
+`--firewall` es opcional. Añade una columna `FIREWALL` con el veredicto de cada puerto y una breve sección `Firewall` con el backend, si se pudieron leer las reglas y las notas del motor; con `--format json` añade un objeto `firewall` de primer nivel (`available`, `backend`, `notes` y `ports` con `port`, `protocol`, `bind_address`, `source`, `verdict` y `reason`; en JSON el veredicto de Docker es `docker-published`). No poder leer el firewall (sin root, sin la herramienta) no es un error: la sección lo indica y todos los puertos expuestos son `unknown`. Los veredictos son informativos: las severidades y los códigos de salida son exactamente los mismos con y sin `--firewall`. Consulta las [limitaciones](#limitaciones).
 
 Códigos de salida (comunes a todos los comandos):
 

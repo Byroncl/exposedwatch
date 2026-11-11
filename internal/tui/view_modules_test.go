@@ -75,7 +75,6 @@ func TestPlaceholderModulesAreHonest(testRun *testing.T) {
 		module Module
 		want   []string
 	}{
-		{ModuleFirewall, []string{"Coming soon", "ufw", "nftables", "allowed"}},
 		{ModuleAlerts, []string{"Coming soon", "Telegram"}},
 		{ModuleSettings, []string{"Coming soon", "notification", "display"}},
 	}
@@ -139,7 +138,7 @@ func TestTopRemotePanelsAreSizedToTheirRows(testRun *testing.T) {
 }
 
 func TestPlaceholderBoxIsSizedToItsText(testRun *testing.T) {
-	model := showModule(testRun, newTestModel(testRun), ModuleFirewall)
+	model := showModule(testRun, newTestModel(testRun), ModuleAlerts)
 	rendered := model.View()
 	if strings.Count(rendered, "│ │") > 0 && len(strings.Split(rendered, "\n")) != testHeight {
 		testRun.Fatal("frame must keep its height")

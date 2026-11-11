@@ -25,12 +25,14 @@ const (
 	tabTitleSummary   = "Summary"
 	tabTitleLive      = "Live"
 	tabTitleTopRemote = "Top remote"
+	// Firewall inner tabs.
+	tabTitleFirewallStatus = "Status"
+	tabTitleFirewallPorts  = "Ports"
 )
 
 // Placeholder modules.
 const (
 	placeholderHeading        = "Coming soon"
-	placeholderFirewallText   = "Will show, for each listening port, whether the firewall (ufw or nftables) has it allowed, blocked or unknown."
 	placeholderAlertsText     = "Will send Telegram notifications when a new exposed port or a serious finding appears."
 	placeholderSettingsText   = "Will hold the notification and display preferences."
 	settingsHeading           = "Current values (read-only)"
