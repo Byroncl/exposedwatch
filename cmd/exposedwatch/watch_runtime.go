@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Byroncl/exposedwatch/internal/adapters/baselinefile"
 	"github.com/Byroncl/exposedwatch/internal/adapters/configfile"
 	"github.com/Byroncl/exposedwatch/internal/adapters/telegram"
 	"github.com/Byroncl/exposedwatch/internal/app"
@@ -23,6 +24,8 @@ type commandRuntime struct {
 	NewNotifier func(token domain.BotToken, chatID domain.ChatID) ports.Notifier
 	NewScanner  func(options ScanOptions) scanFunc
 	Clock       app.Clock
+	// LoadBaseline reads a trusted baseline file for watch --baseline.
+	LoadBaseline baselineLoader
 	// Wait pauses between scans and reports false when the context ended.
 	Wait func(ctx context.Context, duration time.Duration) bool
 }
@@ -39,7 +42,10 @@ func systemRuntime() commandRuntime {
 			return app.NewScanService(buildSources(options)).Scan
 		},
 		Clock: app.SystemClock{},
-		Wait:  waitForNextScan,
+		LoadBaseline: func(path ports.BaselinePath) (ports.BaselineLoad, error) {
+			return baselinefile.NewStore(baselinefile.SystemTrust()).Load(path)
+		},
+		Wait: waitForNextScan,
 	}
 }
 

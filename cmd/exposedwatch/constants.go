@@ -118,7 +118,7 @@ Commands:
               add --firewall to show the host firewall verdict of each port,
               add --baseline FILE to report only drift (for cron)
   baseline    "baseline save" records the ports exposed now as an accepted baseline
-  watch       headless loop that sends Telegram alerts for new risky ports
+  watch       headless loop that sends Telegram alerts for new risky ports (--baseline FILE: only drift)
               (this is the only feature that sends data to a third party)
   notify-test send one test message to the configured Telegram chat
   version     print the version

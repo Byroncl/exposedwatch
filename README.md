@@ -233,7 +233,7 @@ What the baseline holds and where it lives:
 - `baseline save` refuses to overwrite an existing path that is not a baseline: the target must be missing, or a regular file (never a symbolic link) that loads as a trusted, valid baseline; otherwise it exits 1 with `refusing to overwrite <path>: it is not a baseline file (use --force to replace it anyway)`. `--force` is dangerous: it replaces a regular file even if its content is not a baseline, and it still never follows a symbolic link or replaces a directory.
 - Bind addresses are stored in canonical form (lowercase, IPv4-mapped IPv6 written as IPv4, no IPv6 zone); `0.0.0.0` and `::` stay different entries.
 
-`watch --baseline` (using the baseline in the headless alert loop) is planned and does not exist yet.
+`exposedwatch watch --baseline FILE` uses the same baseline in the headless alert loop: see [Drift-only alerts with a baseline](#drift-only-alerts-with-a-baseline).
 
 ## External scan (nmap)
 
@@ -330,10 +330,23 @@ exposedwatch watch --interval 5m --min-severity critical
 - The first scan of a run sends one summary ("N findings at or above high already present", at most 5 titles) and remembers the existing findings without alerting each one. After that, each finding that was not known alerts once. A finding that disappears and reappears within `cooldown_minutes` does not alert again. A source that fails during a scan (for example Docker) does not make its findings look closed.
 - A message that cannot be delivered is retried with an exponential backoff (starting at the scan interval, doubling up to 15 minutes) for up to 24 hours, and then dropped; a dropped alert makes its finding eligible to alert again. A failed send never stops the loop or blocks newer alerts. Logs go to stderr as one timestamped line each, without tokens, URLs or remote addresses.
 - A source that was unreadable during the first scan (for example Docker not started yet) is summarised once ("N existing findings from docker now visible") when it first becomes readable, instead of alerting each finding.
-- State is kept in memory only. `--once` has no state between runs, so every cron run re-sends the first-run summary of whatever is open at that moment.
+- State is kept in memory only. Without `--baseline`, `--once` has no state between runs, so every cron run re-sends the first-run summary of whatever is open at that moment; use a baseline to avoid that (next section).
 - It needs root only for what the scan needs (process names, Docker socket).
 
-Example systemd unit. **It is an untested example, shown as documentation only** (this project ships no packaging for it). It runs as root. Put the secret in a file readable only by root (`chmod 0600`) and set `"enabled": true` in the config file:
+### Drift-only alerts with a baseline
+
+`exposedwatch watch --baseline FILE` (also with `--once`) alerts only on drift from a baseline created with `exposedwatch baseline save`:
+
+- A finding is accepted when its port identity (protocol, port, canonical bind address and source `host` or `docker`) is in the baseline. Accepted findings never alert, neither individually nor in a summary. Process names are ignored, and the same port on a different bind address or from a different source is not accepted.
+- There is no first-run summary. Every finding at or above `--min-severity` (or `alerts.min_severity`) that is not accepted alerts individually, with one extra body line: `Not in baseline (saved YYYY-MM-DD)`. Cooldown, deduplication, retries and the handling of unreadable sources work as described above. Closed ports never alert.
+- The baseline must be trusted, with the same rules as `scan --baseline` (not a symlink, owned by the current user or root, not writable by group or others, regular file, safe parent directory, bounded strict parse). If it is missing, untrusted or corrupt, `watch` refuses to start with exit code 1 and a hint to run `exposedwatch baseline save`; it never falls back to running without a baseline. `--baseline ""` is a usage error (exit code 2).
+- In loop mode the file is reloaded at the start of every cycle, so `exposedwatch baseline save` takes effect without restarting `watch`: findings that become accepted are forgotten silently and newly unaccepted ones alert. If a reload fails after a good load, `watch` keeps the last good baseline and logs one line (`baseline reload failed: ...; using the last good baseline`), another if the reason changes, and one line when it recovers; it does not repeat the message every cycle.
+- `--once` loads the baseline once and keeps no state, so every cron run alerts for the drift present at that moment: the same drift alerts again on every run until you accept it by refreshing the baseline with `baseline save`.
+- Accepting a port accepts ALL findings on it, whatever the rule or severity: a more severe finding on an already accepted port does NOT alert until the port is removed from the baseline. An empty baseline accepts nothing, so every finding at or above the minimum severity alerts.
+- A reload that changes the number of entries or the saved date logs one line (`baseline reloaded: N entries (was M), saved DATE`); it adds `WIDENED` when the baseline grew by at least 50 entries or more than doubled. Unchanged reloads log nothing. A failure is logged once per distinct reason, and load warnings only when they change.
+- Logs never include file contents. The path appears in the start-up line, and error messages may include the path you passed.
+
+Example systemd unit. **It is an untested example, shown as documentation only** (this project ships no packaging for it). Create the baseline first (`exposedwatch baseline save`); without a trusted baseline file `watch --baseline` refuses to start. It runs as root. Put the secret in a file readable only by root (`chmod 0600`) and set `"enabled": true` in the config file:
 
 ```ini
 # /etc/systemd/system/exposedwatch.service
@@ -343,7 +356,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/bin/exposedwatch watch
+ExecStart=/usr/bin/exposedwatch watch --baseline /var/lib/exposedwatch/baseline.json
 EnvironmentFile=/etc/exposedwatch/telegram.env
 Restart=on-failure
 NoNewPrivileges=yes

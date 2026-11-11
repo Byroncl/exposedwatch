@@ -34,6 +34,8 @@ type AlertEvaluator struct {
 	// baseline. Their existing findings are summarised, not alerted one by
 	// one, when they first become visible.
 	unbaselined map[domain.Source]bool
+	// acceptance is the accepted baseline; nil keeps the summary behavior.
+	acceptance *BaselineAcceptance
 }
 
 // NewAlertEvaluator builds an evaluator for one process lifetime.
@@ -69,6 +71,9 @@ func (evaluator *AlertEvaluator) Evaluate(report Report) []domain.Alert {
 func (evaluator *AlertEvaluator) EvaluateDetailed(report Report) []EvaluatedAlert {
 	now := evaluator.clock.Now()
 	qualifying := evaluator.qualifyingFindings(report)
+	if evaluator.acceptance != nil {
+		qualifying = evaluator.withoutAccepted(qualifying)
+	}
 	failed := failedSources(report)
 	if !evaluator.baselineDone {
 		return evaluator.baseline(qualifying, failed, now)
@@ -94,7 +99,7 @@ func (evaluator *AlertEvaluator) EvaluateDetailed(report Report) []EvaluatedAler
 		}
 		if evaluator.shouldAlert(identity, now) {
 			alerts = append(alerts, EvaluatedAlert{
-				Alert:      newFindingAlert(evaluator.hostName, finding),
+				Alert:      evaluator.findingAlert(finding),
 				Identities: []FindingIdentity{identity},
 			})
 		}
