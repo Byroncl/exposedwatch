@@ -10,6 +10,7 @@ import (
 	"os/signal"
 
 	"github.com/Byroncl/exposedwatch/internal/adapters/dockerapi"
+	"github.com/Byroncl/exposedwatch/internal/adapters/nmapscan"
 	"github.com/Byroncl/exposedwatch/internal/adapters/procnet"
 	"github.com/Byroncl/exposedwatch/internal/app"
 	"github.com/Byroncl/exposedwatch/internal/domain"
@@ -57,6 +58,17 @@ func buildSources(options ScanOptions) []app.NamedSource {
 	if !options.NoDocker {
 		sources = append(sources, app.NamedSource{
 			Name: domain.SourceDocker, Source: dockerapi.New(dockerapi.SocketPath(options.DockerSocket)),
+		})
+	}
+	if options.External {
+		sources = append(sources, app.NamedSource{
+			Name: domain.SourceExternal,
+			Source: nmapscan.New(nmapscan.Options{
+				NmapPath: options.NmapPath,
+				Targets:  options.ExternalTargets,
+				Ports:    options.ExternalPorts,
+				Timeout:  options.ExternalTimeout,
+			}),
 		})
 	}
 	return sources
