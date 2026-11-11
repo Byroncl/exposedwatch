@@ -36,7 +36,8 @@ const (
 	inactiveTabFormat  = " %d %s %d "
 	compactActiveTab   = "[%d]"
 	compactInactiveTab = " %d "
-	tabSeparator       = " "
+	tabDivider         = "│"
+	tabGap             = " "
 )
 
 // Table headings.
