@@ -44,6 +44,10 @@ func runWatchWith(ctx context.Context, runtime commandRuntime, arguments []strin
 	for _, warning := range loaded.Warnings {
 		logger.Logf(logConfigWarningFormat, warning)
 	}
+	reloader, acceptance, err := startBaseline(runtime, options, logger, stderr)
+	if err != nil {
+		return ExitRuntimeError
+	}
 	loop := &watchLoop{
 		scan:      runtime.NewScanner(options.scanOptions()),
 		evaluator: app.NewAlertEvaluator(policy, runtime.Clock, runtime.hostNameOrUnknown()),
@@ -55,6 +59,11 @@ func runWatchWith(ctx context.Context, runtime commandRuntime, arguments []strin
 		interval: interval,
 		once:     options.Once,
 		wait:     runtime.Wait,
+	}
+	if reloader != nil {
+		loop.baseline = reloader
+		loop.evaluator.UseBaseline(acceptance)
+		logger.Logf(logBaselineStartFormat, options.BaselineFile, acceptance.EntryCount(), acceptance.SavedOn())
 	}
 	if loop.notifier == nil {
 		logger.Logf(logNotificationsDisabled)

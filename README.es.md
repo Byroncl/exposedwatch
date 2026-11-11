@@ -233,7 +233,7 @@ Qué contiene la baseline y dónde se guarda:
 - `baseline save` se niega a sobrescribir una ruta existente que no sea una baseline: el destino debe no existir, o ser un archivo regular (nunca un enlace simbólico) que se cargue como baseline confiable y válida; en otro caso termina con 1 y el mensaje `refusing to overwrite <ruta>: it is not a baseline file (use --force to replace it anyway)`. `--force` es peligroso: reemplaza un archivo regular aunque su contenido no sea una baseline, y aun así nunca sigue un enlace simbólico ni reemplaza un directorio.
 - Las direcciones de enlace se guardan en forma canónica (minúsculas, IPv6 mapeado a IPv4 escrito como IPv4, sin zona IPv6); `0.0.0.0` y `::` siguen siendo entradas distintas.
 
-`watch --baseline` (usar la baseline en el bucle de alertas sin terminal) está planificado y todavía no existe.
+`exposedwatch watch --baseline ARCHIVO` usa la misma baseline en el bucle de alertas sin terminal: consulta [Alertas solo de deriva con baseline](#alertas-solo-de-deriva-con-baseline).
 
 ## Escaneo externo (nmap)
 
@@ -330,10 +330,23 @@ exposedwatch watch --interval 5m --min-severity critical
 - El primer escaneo de cada ejecución envía un único resumen ("N findings at or above high already present", con un máximo de 5 títulos) y recuerda los hallazgos existentes sin alertar cada uno. Después, cada hallazgo que no era conocido alerta una vez. Un hallazgo que desaparece y reaparece dentro de `cooldown_minutes` no vuelve a alertar. Una fuente que falla durante un escaneo (por ejemplo Docker) no hace que sus hallazgos parezcan cerrados.
 - Un mensaje que no se pudo entregar se reintenta con espera exponencial (comienza en el intervalo de escaneo y se duplica hasta 15 minutos) durante un máximo de 24 horas y luego se descarta; una alerta descartada permite que su hallazgo vuelva a alertar. Un envío fallido nunca detiene el bucle ni bloquea las alertas más nuevas. Los logs van a stderr, una línea con marca de tiempo por evento, sin tokens, URLs ni direcciones remotas.
 - Una fuente que no se pudo leer durante el primer escaneo (por ejemplo, Docker aún sin iniciar) se resume una sola vez ("N existing findings from docker now visible") cuando pasa a ser legible, en lugar de alertar cada hallazgo.
-- El estado se mantiene solo en memoria. `--once` no conserva estado entre ejecuciones, por lo que cada ejecución de cron vuelve a enviar el resumen inicial de lo que esté abierto en ese momento.
+- El estado se mantiene solo en memoria. Sin `--baseline`, `--once` no conserva estado entre ejecuciones, por lo que cada ejecución de cron vuelve a enviar el resumen inicial de lo que esté abierto en ese momento; usa una baseline para evitarlo (sección siguiente).
 - Solo necesita root para lo que necesita el escaneo (nombres de proceso, socket de Docker).
 
-Ejemplo de unidad systemd. **Es un ejemplo no probado, solo como documentación** (este proyecto no incluye empaquetado para ello). Se ejecuta como root. Guarda el secreto en un archivo legible solo por root (`chmod 0600`) y pon `"enabled": true` en el archivo de configuración:
+### Alertas solo de deriva con baseline
+
+`exposedwatch watch --baseline ARCHIVO` (también con `--once`) alerta únicamente sobre la deriva respecto a una baseline creada con `exposedwatch baseline save`:
+
+- Un hallazgo está aceptado cuando la identidad de su puerto (protocolo, puerto, dirección de enlace canónica y fuente `host` o `docker`) figura en la baseline. Los hallazgos aceptados nunca alertan, ni de forma individual ni en un resumen. Los nombres de proceso se ignoran, y el mismo puerto en otra dirección de enlace o desde otra fuente no se considera aceptado.
+- No hay resumen inicial. Cada hallazgo con severidad igual o superior a `--min-severity` (o `alerts.min_severity`) que no esté aceptado alerta de forma individual, con una línea adicional en el cuerpo: `Not in baseline (saved AAAA-MM-DD)`. El enfriamiento, la deduplicación, los reintentos y el tratamiento de las fuentes ilegibles funcionan como se describió antes. Los puertos cerrados nunca alertan.
+- La baseline debe ser de confianza, con las mismas reglas que `scan --baseline` (no es un enlace simbólico, pertenece al usuario actual o a root, no es escribible por grupo ni otros, es un archivo regular, el directorio padre es seguro y el análisis es estricto y acotado). Si falta, no es de confianza o está corrupta, `watch` se niega a arrancar con código de salida 1 y una indicación para ejecutar `exposedwatch baseline save`; nunca continúa sin baseline. `--baseline ""` es un error de uso (código de salida 2).
+- En modo bucle, el archivo se recarga al inicio de cada ciclo, de modo que `exposedwatch baseline save` surte efecto sin reiniciar `watch`: los hallazgos que pasan a estar aceptados se olvidan en silencio y los que dejan de estarlo alertan. Si una recarga falla tras una carga correcta, `watch` conserva la última baseline válida y registra una línea (`baseline reload failed: ...; using the last good baseline`), otra si cambia el motivo y otra cuando se recupera; no repite el mensaje en cada ciclo.
+- `--once` carga la baseline una sola vez y no conserva estado, por lo que cada ejecución de cron alerta sobre la deriva presente en ese momento: la misma deriva vuelve a alertar en cada ejecución hasta que la aceptes actualizando la baseline con `baseline save`.
+- Aceptar un puerto acepta TODOS los hallazgos de ese puerto, sea cual sea la regla o la severidad: un hallazgo más grave en un puerto ya aceptado NO alerta hasta que el puerto se elimine de la baseline. Una baseline vacía no acepta nada, así que alerta todo hallazgo con severidad igual o superior a la mínima.
+- Una recarga que cambia el número de entradas o la fecha de guardado registra una línea (`baseline reloaded: N entries (was M), saved FECHA`); añade `WIDENED` cuando la baseline creció en al menos 50 entradas o más del doble. Las recargas sin cambios no registran nada. Un fallo se registra una vez por cada motivo distinto, y las advertencias de carga solo cuando cambian.
+- Los logs nunca incluyen el contenido del archivo. La ruta aparece en la línea de arranque, y los mensajes de error pueden incluir la ruta que indicaste.
+
+Ejemplo de unidad systemd. **Es un ejemplo no probado, solo como documentación** (este proyecto no incluye empaquetado para ello). Crea antes la baseline (`exposedwatch baseline save`); sin un archivo de baseline de confianza, `watch --baseline` se niega a arrancar. Se ejecuta como root. Guarda el secreto en un archivo legible solo por root (`chmod 0600`) y pon `"enabled": true` en el archivo de configuración:
 
 ```ini
 # /etc/systemd/system/exposedwatch.service
@@ -343,7 +356,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/bin/exposedwatch watch
+ExecStart=/usr/bin/exposedwatch watch --baseline /var/lib/exposedwatch/baseline.json
 EnvironmentFile=/etc/exposedwatch/telegram.env
 Restart=on-failure
 NoNewPrivileges=yes

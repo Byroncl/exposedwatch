@@ -26,3 +26,10 @@ const (
 	summaryLineSeparator = "\n"
 	singularFindingCount = 1
 )
+
+// Baseline mode texts.
+const (
+	baselineDateLayout  = "2006-01-02"
+	notInBaselineFormat = "Not in baseline (saved %s)"
+	bodyLineSeparator   = "\n"
+)

@@ -18,6 +18,7 @@ type watchLoop struct {
 	interval  time.Duration
 	once      bool
 	wait      func(ctx context.Context, duration time.Duration) bool
+	baseline  *baselineReloader // nil without --baseline
 }
 
 // run loops until the context ends (exit 0) or, with once, after a single
@@ -43,6 +44,9 @@ func (loop *watchLoop) run(ctx context.Context) ExitCode {
 // stops pending alerts from being retried.
 func (loop *watchLoop) iterate(ctx context.Context) ExitCode {
 	code := ExitOK
+	if loop.baseline != nil && !loop.once {
+		loop.baseline.refresh(loop.evaluator)
+	}
 	report, err := loop.scan(ctx)
 	switch {
 	case err != nil && ctx.Err() != nil:

@@ -17,9 +17,11 @@ type WatchOptions struct {
 	Interval    time.Duration
 	MinSeverity string
 	Once        bool
-	ProcRoot    string
-	DockerSock  string
-	NoDocker    bool
+	// BaselineFile, when set, restricts alerts to drift from that baseline.
+	BaselineFile string
+	ProcRoot     string
+	DockerSock   string
+	NoDocker     bool
 }
 
 // parseWatchOptions parses and validates watch flags.
@@ -31,6 +33,7 @@ func parseWatchOptions(arguments []string, errorOutput io.Writer) (WatchOptions,
 	flagSet.DurationVar(&options.Interval, flagInterval, 0, usageWatchInterval)
 	flagSet.StringVar(&options.MinSeverity, flagMinSeverity, "", usageWatchMinSeverity)
 	flagSet.BoolVar(&options.Once, flagOnce, false, usageOnce)
+	flagSet.StringVar(&options.BaselineFile, flagBaseline, "", usageWatchBaseline)
 	flagSet.StringVar(&options.ProcRoot, flagProcRoot, defaultProcRoot, usageProcRoot)
 	flagSet.StringVar(&options.DockerSock, flagDockerSocket, defaultDockerSock, usageDockerSocket)
 	flagSet.BoolVar(&options.NoDocker, flagNoDocker, false, usageNoDocker)
@@ -39,6 +42,9 @@ func parseWatchOptions(arguments []string, errorOutput io.Writer) (WatchOptions,
 	}
 	if flagSet.NArg() > 0 {
 		return WatchOptions{}, usageError{fmt.Sprintf(unexpectedArgsFmt, flagSet.Args())}
+	}
+	if err := rejectEmptyFlag(flagSet, flagBaseline, options.BaselineFile); err != nil {
+		return WatchOptions{}, err
 	}
 	if options.Interval != 0 && options.Interval < minWatchInterval {
 		return WatchOptions{}, usageError{fmt.Sprintf(invalidWatchIntervalFmt, options.Interval, minWatchInterval)}
