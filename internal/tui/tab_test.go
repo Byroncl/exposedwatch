@@ -20,8 +20,8 @@ func TestInnerTabsOfEveryModule(testRun *testing.T) {
 		ModulePorts:       {TabFindings, TabAllPorts, TabChanges},
 		ModuleConnections: {TabConnections, TabTopRemote},
 		ModuleFirewall:    {TabFirewall, TabFirewallPorts},
-		ModuleAlerts:      {TabAlerts},
-		ModuleSettings:    {TabSettings},
+		ModuleAlerts:      {TabAlertsStatus, TabAlertsPreview},
+		ModuleSettings:    {TabSettingsTelegram, TabSettingsDisplay},
 	}
 	for module, tabs := range want {
 		specs := module.innerTabs()

@@ -58,9 +58,10 @@ sudo exposedwatch --no-docker          # skip Docker discovery
 sudo exposedwatch --no-connections     # disable the Connections module
 sudo exposedwatch --no-firewall        # disable the Firewall module (no firewall reads)
 sudo exposedwatch --theme light        # force the palette for light terminals
+exposedwatch --config ~/alerts.json    # config file used by Settings and Alerts (default path below)
 ```
 
-Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--no-firewall`, `--theme auto|dark|light` (default `auto`, which detects the terminal background). It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
+Flags: `--proc-root`, `--docker-socket`, `--no-docker`, `--interval`, `--no-connections`, `--no-firewall`, `--theme auto|dark|light` (default `auto`, which detects the terminal background), `--config PATH` (the config file that Settings and Alerts read and write; same meaning as for `watch` and `notify-test`). It needs an interactive terminal; otherwise it exits with code 2 (use `scan` instead). A source that fails (for example Docker unavailable) is shown as a warning line and does not stop the view.
 
 The header shows the severity counts, an overall risk gauge (`SAFE`, `LOW`, `MEDIUM`, `HIGH` or `CRITICAL`, driven by the highest severity present), the number of ports per source and the `+N new -M closed` counters. The header also shows `conn N (in X / out Y)` when the width allows it. On the Overview the header is just the title, because the Overview shows those numbers itself.
 
@@ -72,12 +73,12 @@ The screen has a sidebar of modules on the left and, on the right, the tabs of t
 | Ports | Findings, All ports, Changes | `Findings`: one row per finding. `All ports`: every port, with its severity or `-` when no rule matched. `Changes`: a log of ports that opened or closed since the view started, newest first (the last 200 entries are kept) |
 | Connections | Live, Top remote | `Live`: who is connected to this server right now (see below). `Top remote`: the busiest inbound remote addresses and the inbound count per local port, full size |
 | Firewall | Status, Ports | Which listening ports the host firewall lets through, as information only (see [Firewall verdicts](#firewall-verdicts)). `Status`: backend, whether the rules could be read, the notes of the engine, a count per verdict, when it was last evaluated and what each verdict means. `Ports`: one row per host or Docker port with its verdict, most worrying first |
-| Alerts | - | Not available yet (placeholder) |
-| Settings | - | Not available yet (placeholder); it only shows the current theme, refresh interval and whether connections are enabled, read-only |
+| Alerts | Status, Preview | `Status`: whether Telegram is configured (token masked, chat id only reported as set), enabled or disabled, minimum severity, cooldown, check interval, config file and its warnings, and the result of the last test message of this session. `Preview`: the current findings at or above the saved minimum severity, as "would alert now". The TUI never sends alerts itself: `exposedwatch watch` sends them, and both `notify-test` and the `[ Send test message ]` row send a test message to Telegram (see [Settings > Telegram and the Alerts module](#settings--telegram-and-the-alerts-module)) |
+| Settings | Telegram, Display | `Telegram`: an editable form for the alert configuration (see below). `Display`: the current theme, refresh interval and whether connections and the firewall are enabled, read-only |
 
-The view starts on Ports, Findings. Each module remembers the tab you last used in it. Alerts and Settings only say what they are planned to do; nothing in them works yet.
+The view starts on Ports, Findings. Each module remembers the tab you last used in it. The Overview also shows one line `Alerts: on (min high)` or `Alerts: off (min high)` (`n/a` when the config file cannot be loaded).
 
-The sidebar adapts to the terminal width: full (module names with a count or flag, for example the number of findings and `NEW` on Ports, the connection count on Connections, the number of ports the firewall allows or restricts on Firewall (`n/a` when the rules cannot be read, `off` with `--no-firewall`), `off` on Alerts) from 80 columns, compact (one letter per module) from 50 to 79 columns, and hidden below 50. `b` hides or shows it on top of that. Nothing is drawn outside the terminal at any size.
+The sidebar adapts to the terminal width: full (module names with a count or flag, for example the number of findings and `NEW` on Ports, the connection count on Connections, the number of ports the firewall allows or restricts on Firewall (`n/a` when the rules cannot be read, `off` with `--no-firewall`), `on` when alerts are enabled and configured, `off` when they are disabled or not configured, `n/a` when the config file cannot be loaded, on Alerts) from 80 columns, compact (one letter per module) from 50 to 79 columns, and hidden below 50. `b` hides or shows it on top of that. Nothing is drawn outside the terminal at any size.
 
 The first successful scan is the baseline: nothing is flagged. After each later refresh, ports that opened get a `NEW` badge for 5 refreshes and a log entry; ports that closed get a log entry with their last known severity. `+N new -M closed` counts these events since the view started. A refresh that fails, or a source that fails during a refresh, never produces `closed` events: the previous data of that source is kept. The log lives only in memory and is lost when the view exits. A detail panel shows the rule, recommendation, bind address, process or container and when this session first saw the selected port.
 
@@ -85,10 +86,12 @@ The first successful scan is the baseline: nothing is flagged. After each later 
 | --- | ------ |
 | `tab` / `shift+tab` | Next / previous module |
 | `]` / `[` | Next / previous tab of the current module |
-| `1` to `9` | Jump to that tab of the current module (Ports: Findings / All ports / Changes; Connections: Live / Top remote; Firewall: Status / Ports) |
+| `1` to `9` | Jump to that tab of the current module (Ports: Findings / All ports / Changes; Connections: Live / Top remote; Firewall: Status / Ports; Alerts: Status / Preview; Settings: Telegram / Display) |
 | `b` | Show or hide the sidebar |
 | `up` / `k`, `down` / `j` | Move selection (tables) |
 | `g` / `G` | Jump to top / bottom (tables) |
+| `enter` | Settings > Telegram: toggle or cycle the selected row, start editing a value, or run `[ Save ]` / `[ Send test message ]` |
+| while editing | Settings > Telegram: type or paste the value; `enter` saves the value, `esc` cancels, `backspace` deletes. No other key acts, so any character can be typed (`ctrl+c` still quits) |
 | `r` | Refresh now (also re-reads the firewall rules) |
 | `s` | Cycle sort: severity, port, process (Findings and All ports); direction, local port, remote address, process, age (Connections / Live); verdict, port, process (Firewall / Ports) |
 | `f` | Cycle minimum severity filter (Findings and All ports only) |
@@ -207,7 +210,7 @@ sudo exposedwatch scan --external
 
 - Alerts are sent to Telegram's servers (`api.telegram.org`), a third party. Each message contains this host's name, the port and protocol, the severity, the process name, the rule id and a short recommendation.
 - Alerts never contain remote IP addresses: they describe what this machine exposes, not who connects to it.
-- This is the only feature that makes an outbound connection, besides the optional nmap scan. `scan` and the interactive view send nothing anywhere.
+- This is the only feature that makes an outbound connection, besides the optional nmap scan. `scan` and the interactive view send nothing anywhere, except the test message you start yourself from Settings > Telegram (it goes to Telegram too).
 - The bot token is a secret. The tool shows it only masked (for example `123456789:****`) and removes it from the errors and logs it produces, and it never writes the token anywhere itself. Keep the file you put it in at mode `0600`, or better, keep the token out of the disk in an environment variable.
 - Standard proxy environment variables (`HTTPS_PROXY`, `NO_PROXY`) are honored. HTTPS goes through the proxy with `CONNECT`, so the proxy sees the destination host (`api.telegram.org`) but not the request path, which contains the bot token.
 
@@ -227,7 +230,7 @@ exposedwatch notify-test
 
 The config file is JSON. Its default location is `/etc/exposedwatch/config.json` when you run as root, and `$XDG_CONFIG_HOME/exposedwatch/config.json` (or `~/.config/exposedwatch/config.json`) otherwise. `--config PATH` overrides it.
 
-No command writes this file yet: you create and edit it by hand. As root, create it private before putting any secret in it:
+You can edit this file by hand, or from the interactive view (see [Settings > Telegram and the Alerts module](#settings--telegram-and-the-alerts-module)). If you edit it by hand as root, create it private before putting any secret in it:
 
 ```sh
 sudo install -d -m 700 /etc/exposedwatch
@@ -246,6 +249,28 @@ sudo $EDITOR /etc/exposedwatch/config.json
 - Use mode `0600` for the file. A looser mode only produces a warning. A symbolic link, or a file not owned by the user running the tool, is refused. As root, a file whose directory can be written by group or others is refused too; other users only get a warning for that.
 - `EXPOSEDWATCH_TELEGRAM_TOKEN` and `EXPOSEDWATCH_TELEGRAM_CHAT_ID` override the file, so the token does not have to be on disk. Alerts are sent only when `telegram.enabled` is `true` and both values are set from either place.
 - `min_severity` is `info`, `low`, `medium`, `high` or `critical`. `interval_seconds` must be at least 10.
+
+### Settings > Telegram and the Alerts module
+
+In the interactive view, Settings > Telegram edits the same config file that `watch` and `notify-test` read (`--config PATH` selects another one):
+
+| Row | How it works |
+| --- | ------------ |
+| Enabled | `enter` toggles it |
+| Bot token | `enter` starts typing (or pasting) a new token; it starts empty and every typed character is shown as a bullet. When not editing, only the masked form (for example `123456789:****`) is shown. Confirming an empty value keeps the current token: a token can be changed but not cleared from the form (remove it by editing the file) |
+| Chat ID | `enter` starts editing |
+| Minimum severity | `enter` cycles info, low, medium, high, critical |
+| Cooldown (minutes), Check interval (seconds) | `enter` starts editing; digits only (other characters are ignored and a `digits only` hint is shown) |
+| `[ Save ]` | Writes the file |
+| `[ Send test message ]` | Sends one test message to Telegram with the values currently in the form, saved or not, and shows `Sending...` and then `Sent` or the failure. It needs a token and a chat id. One test runs at a time and the view keeps working while it is in flight (the whole attempt is limited to 15 seconds) |
+
+- Move between rows with `j`/`k` or the arrows. While a value is being typed, no other key is interpreted: `q`, `tab`, `b`, `?` and digits are text. `enter` keeps the value and `esc` cancels it. Pasting works (control characters are dropped). `ctrl+c` still quits.
+- `unsaved changes` is shown until you save. The limits of cooldown and interval, and every other validation, are the ones of the config file; a rejected save shows the reason and leaves the file untouched. `[ Save ]` does nothing (`No changes to save`) when nothing changed since the last load or save, and `[ Send test message ]` waits 5 seconds between two sends.
+- Save writes the file with the same rules as above: a private file (`0600`), written atomically, in a directory it creates with `0700` when it is missing; saving also repairs looser permissions of an older file. A file that is a symbolic link, is not yours, or cannot be loaded is not overwritten, and the form stays read-only with the reason shown.
+- Saving from the interactive view rewrites the file with the known settings only: comments and unknown keys are not preserved. If you keep extra keys, edit the file by hand. As root, saving is refused when the config directory is writable by group or others; as a normal user it saves and shows a warning.
+- If the token or the chat id comes from `EXPOSEDWATCH_TELEGRAM_TOKEN` / `EXPOSEDWATCH_TELEGRAM_CHAT_ID`, its row is read-only and says `from environment (...)`. Values from the environment are never written to the file; Save keeps whatever the file already had for them.
+- `exposedwatch watch` reads the file when it starts and does not reload it: restart `watch` to apply a saved change. The Alerts module shows the saved values, not unsaved edits.
+- Privacy: a test message goes to Telegram's servers like any alert (see above). The token is never displayed, logged or included in an error by the view; it only travels to the config file when you save it and to Telegram when you send a test message.
 
 ### Watch
 
@@ -327,7 +352,7 @@ sudo apt remove exposedwatch
 
 - Run with `sudo` so process names can be resolved; without it, ports are still listed but the process column may be empty.
 - Docker discovery reads the Docker socket (`/var/run/docker.sock` by default, change with `--docker-socket`). Your user needs access to it, otherwise Docker is reported as a source that could not be read.
-- Read-only: it reads `/proc` and sends a single `GET` request to the Docker socket to list containers. It does not open or change ports, and does not modify containers. With `--external`, nmap additionally opens TCP connections to the scanned targets. Only `watch` and `notify-test` make an outbound connection of their own: they send alerts to Telegram (see [Alerts (Telegram)](#alerts-telegram)).
+- Read-only: it reads `/proc` and sends a single `GET` request to the Docker socket to list containers. It does not open or change ports, and does not modify containers. With `--external`, nmap additionally opens TCP connections to the scanned targets. Only `watch`, `notify-test` and the test message of Settings > Telegram make an outbound connection of their own: they send alerts to Telegram (see [Alerts (Telegram)](#alerts-telegram)).
 - `--nmap-path` runs the given binary with the same privileges as exposedwatch, so do not let untrusted users pass arguments to `sudo exposedwatch` through sudoers rules.
 
 ## License

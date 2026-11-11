@@ -22,6 +22,7 @@ var (
 	searchableTabs = tabSet{TabFindings, TabAllPorts, TabConnections, TabFirewallPorts}
 	connectionTabs = tabSet{TabConnections, TabTopRemote}
 	changesTabs    = tabSet{TabChanges}
+	formTabs       = tabSet{TabSettingsTelegram}
 )
 
 // footerHint is one footer entry: the views it applies to and how early it is
@@ -34,8 +35,10 @@ type footerHint struct {
 	NeedsConnections bool
 	// NeedsFirewall hides the hint on the Firewall ports view while the firewall is disabled.
 	NeedsFirewall bool
-	AppliesTo     tabSet
-	DropRank      int
+	// NeedsForm hides the hint while the settings form cannot be used.
+	NeedsForm bool
+	AppliesTo tabSet
+	DropRank  int
 }
 
 // footerHints lists footer entries in display order.
@@ -44,6 +47,8 @@ var footerHints = []footerHint{
 	{Text: hintInnerTabs, DropRank: dropRankInnerTabs},
 	{Text: hintMove, AppliesTo: tableTabs, DropRank: dropRankMove},
 	{Text: hintEnds, AppliesTo: changesTabs, DropRank: dropRankEnds},
+	{Text: hintFormMove, NeedsForm: true, AppliesTo: formTabs, DropRank: dropRankMove},
+	{Text: hintFormEnter, NeedsForm: true, AppliesTo: formTabs, DropRank: dropRankSort},
 	{Text: hintSort, NeedsConnections: true, NeedsFirewall: true, AppliesTo: searchableTabs, DropRank: dropRankSort},
 	{Text: hintMinimum, AppliesTo: portTableTabs, DropRank: dropRankMinimum},
 	{Text: hintFilter, NeedsConnections: true, NeedsFirewall: true, AppliesTo: searchableTabs, DropRank: dropRankFilter},
@@ -58,6 +63,9 @@ var footerHints = []footerHint{
 // shownOn tells whether the hint is listed for the model's active view.
 func (hint footerHint) shownOn(model Model) bool {
 	if !hint.AppliesTo.contains(model.activeTab) {
+		return false
+	}
+	if hint.NeedsForm && !model.settings.isEditable() {
 		return false
 	}
 	if hint.NeedsConnections && model.activeTab.usesConnections() && !model.connectionsEnabled() {

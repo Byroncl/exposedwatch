@@ -63,6 +63,12 @@ func previewConnections() []domain.Connection {
 // previewModel builds a model with a baseline, one NEW port and two closed ports.
 func previewModel(testRun *testing.T) Model {
 	testRun.Helper()
+	return previewModelWith(testRun, Options{})
+}
+
+// previewModelWith is previewModel with extra options (the settings store and tester).
+func previewModelWith(testRun *testing.T, extra Options) Model {
+	testRun.Helper()
 	var baseline []domain.Port
 	for _, port := range previewPorts() {
 		if port.Number != previewNewPortNumber {
@@ -71,7 +77,9 @@ func previewModel(testRun *testing.T) Model {
 	}
 	closedFirst := previewPort(3306, domain.TCP, "0.0.0.0", "mysqld", "", domain.SourceHost)
 	closedSecond := previewPort(3389, domain.TCP, "0.0.0.0", "xrdp", "", domain.SourceHost)
-	model := New(Options{Scanner: fakeScanner{}, Connections: fakeConnectionSource{}, Firewall: &fakeFirewall{}, Interval: testInterval, Version: testVersion})
+	extra.Scanner, extra.Connections, extra.Firewall = fakeScanner{}, fakeConnectionSource{}, &fakeFirewall{}
+	extra.Interval, extra.Version = testInterval, testVersion
+	model := New(extra)
 	model = refreshWith(testRun, model, previewReport(append(append([]domain.Port{}, baseline...), closedFirst, closedSecond)), 0)
 	model = refreshWith(testRun, model, previewReport(append(previewPorts(), closedSecond)), 1)
 	model = refreshWith(testRun, model, previewReport(previewPorts()), 2)
@@ -116,4 +124,26 @@ func previewUnavailableFirewallReport() domain.FirewallReport {
 		}
 	}
 	return domain.FirewallReport{Backend: domain.BackendUnknown, Findings: findings, Notes: []string{"needs root to read firewall rules"}}
+}
+
+// previewSettingsModel is the preview fixture with a configured (file-sourced) Telegram setup.
+func previewSettingsModel(testRun *testing.T) Model {
+	testRun.Helper()
+	return previewSettingsModelFor(testRun, configuredSettings())
+}
+
+// previewEnvironmentSettingsModel has the token and chat id coming from the environment.
+func previewEnvironmentSettingsModel(testRun *testing.T) Model {
+	testRun.Helper()
+	settings := configuredSettings()
+	settings.TokenSource = SettingSourceEnvironment
+	settings.ChatSource = SettingSourceEnvironment
+	return previewSettingsModelFor(testRun, settings)
+}
+
+func previewSettingsModelFor(testRun *testing.T, settings AlertSettings) Model {
+	testRun.Helper()
+	store := &fakeSettingsStore{settings: settings}
+	model := previewModelWith(testRun, Options{Settings: store, AlertTester: &fakeAlertTester{}})
+	return applyMessage(testRun, model, settingsLoadCommand(store)())
 }

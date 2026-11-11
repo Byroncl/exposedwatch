@@ -6,6 +6,10 @@ import (
 )
 
 func (model Model) footerLine(width int) string {
+	if model.viewState == ViewFieldEdit {
+		prompt := fmt.Sprintf(editHintFormat, model.settings.cursor.label())
+		return model.styles.warning.Render(clampWidth(prompt, width))
+	}
 	if model.viewState == ViewFilterInput {
 		prompt := fmt.Sprintf(filterPromptFormat, model.filterInput, filterCursor)
 		return model.styles.warning.Render(clampWidth(prompt, width))

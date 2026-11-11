@@ -77,25 +77,36 @@ func TestLayoutPreview(testRun *testing.T) {
 		keys   []string
 		// needsRoot shows the firewall as it looks when the rules cannot be read.
 		needsRoot bool
+		// build replaces the realistic fixture, for the settings previews.
+		build func(testRun *testing.T) Model
 	}{
-		{"overview", 110, 28, []string{"shift+tab"}, false},
-		{"ports / findings", 110, 28, nil, false},
-		{"ports / all ports", 110, 28, []string{"2"}, false},
-		{"ports / changes", 110, 28, []string{"3"}, false},
-		{"connections / live", 110, 28, []string{"tab"}, false},
-		{"connections / top remote", 110, 28, []string{"tab", "2"}, false},
-		{"firewall / status", 110, 28, []string{"tab", "tab"}, false},
-		{"firewall / ports", 110, 28, []string{"tab", "tab", "2"}, false},
-		{"firewall / ports compact sidebar", 70, 20, []string{"tab", "tab", "2"}, false},
-		{"firewall / status unavailable (needs root)", 110, 28, []string{"tab", "tab"}, true},
-		{"ports / findings compact sidebar", 70, 20, nil, false},
-		{"ports / findings compact sidebar (lowest width)", 50, 16, nil, false},
-		{"ports / findings hidden sidebar", 49, 16, nil, false},
-		{"ports / findings hidden sidebar", 40, 12, nil, false},
-		{"connections / live compact sidebar", 70, 20, []string{"tab"}, false},
+		{"overview", 110, 28, []string{"shift+tab"}, false, nil},
+		{"ports / findings", 110, 28, nil, false, nil},
+		{"ports / all ports", 110, 28, []string{"2"}, false, nil},
+		{"ports / changes", 110, 28, []string{"3"}, false, nil},
+		{"connections / live", 110, 28, []string{"tab"}, false, nil},
+		{"connections / top remote", 110, 28, []string{"tab", "2"}, false, nil},
+		{"firewall / status", 110, 28, []string{"tab", "tab"}, false, nil},
+		{"firewall / ports", 110, 28, []string{"tab", "tab", "2"}, false, nil},
+		{"firewall / ports compact sidebar", 70, 20, []string{"tab", "tab", "2"}, false, nil},
+		{"firewall / status unavailable (needs root)", 110, 28, []string{"tab", "tab"}, true, nil},
+		{"ports / findings compact sidebar", 70, 20, nil, false, nil},
+		{"ports / findings compact sidebar (lowest width)", 50, 16, nil, false, nil},
+		{"ports / findings hidden sidebar", 49, 16, nil, false, nil},
+		{"ports / findings hidden sidebar", 40, 12, nil, false, nil},
+		{"connections / live compact sidebar", 70, 20, []string{"tab"}, false, nil},
+		{"settings / telegram (token set, unsaved)", 110, 28, []string{"shift+tab", "shift+tab", "enter"}, false, previewSettingsModel},
+		{"settings / telegram editing the chat id", 110, 28, []string{"shift+tab", "shift+tab", "j", "j", "enter", "4", "2"}, false, previewSettingsModel},
+		{"settings / telegram environment-sourced token", 110, 28, []string{"shift+tab", "shift+tab"}, false, previewEnvironmentSettingsModel},
+		{"alerts / status", 110, 28, []string{"shift+tab", "shift+tab", "shift+tab"}, false, previewSettingsModel},
+		{"alerts / preview", 110, 28, []string{"shift+tab", "shift+tab", "shift+tab", "2"}, false, previewSettingsModel},
+		{"settings / telegram compact sidebar", 70, 20, []string{"shift+tab", "shift+tab"}, false, previewSettingsModel},
 	}
 	for _, preview := range previews {
 		base := model
+		if preview.build != nil {
+			base = preview.build(testRun)
+		}
 		if preview.needsRoot {
 			base = applyMessage(testRun, model, FirewallResultMessage{Report: previewUnavailableFirewallReport(), At: timeAfter(3)})
 		}

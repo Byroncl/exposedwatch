@@ -20,6 +20,12 @@ func (model Model) Update(incomingMessage tea.Msg) (tea.Model, tea.Cmd) {
 		return model.handleConnectionsResult(typedMessage), nil
 	case FirewallResultMessage:
 		return model.handleFirewallResult(typedMessage), nil
+	case SettingsLoadedMessage:
+		return model.handleSettingsLoaded(typedMessage), nil
+	case SettingsSavedMessage:
+		return model.handleSettingsSaved(typedMessage)
+	case AlertTestResultMessage:
+		return model.handleAlertTestResult(typedMessage), nil
 	case tea.KeyMsg:
 		return model.handleKey(typedMessage)
 	default:

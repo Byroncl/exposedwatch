@@ -16,8 +16,13 @@ type Options struct {
 	Connections ConnectionSnapshotter
 	// Firewall feeds the Firewall module; nil disables it and the firewall is never read.
 	Firewall FirewallEvaluator
-	Interval time.Duration
-	Version  string
+	// Settings loads and saves the Telegram alert configuration; nil makes the
+	// Settings form and the Alerts module report that they are not available.
+	Settings SettingsStore
+	// AlertTester sends the test message of the Settings form; nil disables it.
+	AlertTester AlertTester
+	Interval    time.Duration
+	Version     string
 	// Theme selects the palette adaptation; the zero value means ThemeAuto.
 	Theme Theme
 	// Clock returns the current time; defaults to time.Now.
@@ -90,6 +95,9 @@ type Model struct {
 	filterInput string
 	viewState   ViewState
 
+	// settings holds the Telegram form and the saved alert configuration.
+	settings settingsState
+
 	styles styles
 }
 
@@ -125,6 +133,7 @@ func New(options Options) Model {
 		hideLoopback:          true,
 
 		firewall: options.Firewall,
+		settings: settingsState{store: options.Settings, tester: options.AlertTester},
 	}
 }
 
@@ -133,6 +142,9 @@ func (model Model) Init() tea.Cmd {
 	commands := []tea.Cmd{scanCommand(model.scanner, model.clock), tickCommand(model.interval)}
 	if model.connectionsEnabled() {
 		commands = append(commands, connectionsCommand(model.connections, model.clock))
+	}
+	if model.settings.isAvailable() {
+		commands = append(commands, settingsLoadCommand(model.settings.store))
 	}
 	return tea.Batch(commands...)
 }

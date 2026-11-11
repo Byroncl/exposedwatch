@@ -10,6 +10,8 @@ import (
 
 func (model Model) handleKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch model.viewState {
+	case ViewFieldEdit:
+		return model.handleFieldEditKey(keyPress)
 	case ViewFilterInput:
 		return model.handleFilterInputKey(keyPress)
 	case ViewHelp:
@@ -20,8 +22,16 @@ func (model Model) handleKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if keyPress.Paste {
+		// A paste is text, never a command: it only means something while editing.
+		return model, nil
+	}
 	action := actionForKey(keyPress)
 	switch action {
+	case ActionActivate:
+		if model.activeTab == TabSettingsTelegram {
+			return model.activateField()
+		}
 	case ActionQuit:
 		return model, tea.Quit
 	case ActionMoveUp, ActionMoveDown, ActionJumpTop, ActionJumpBottom:
@@ -56,6 +66,10 @@ func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleCursorAction moves the selection. Only the table views have one.
 func (model *Model) handleCursorAction(action Action) {
+	if model.activeTab == TabSettingsTelegram {
+		model.moveFormCursor(action)
+		return
+	}
 	if !model.activeTab.isTable() {
 		return
 	}

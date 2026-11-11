@@ -121,7 +121,8 @@ Commands:
 
 Run "exposedwatch tui -h", "exposedwatch scan -h", "exposedwatch watch -h" or
 "exposedwatch notify-test -h" for flags.
-The tui accepts --interval, --theme auto|dark|light, --no-connections and --no-firewall.
+The tui accepts --interval, --theme auto|dark|light, --no-connections, --no-firewall
+and --config (the file edited by Settings > Telegram).
 Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 `
 	versionFormat        = "exposedwatch %s"

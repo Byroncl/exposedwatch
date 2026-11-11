@@ -12,8 +12,10 @@ const (
 	TabSummary
 	TabTopRemote
 	TabFirewall
-	TabAlerts
-	TabSettings
+	TabAlertsStatus
+	TabAlertsPreview
+	TabSettingsTelegram
+	TabSettingsDisplay
 	TabFirewallPorts
 )
 
@@ -34,10 +36,14 @@ func (tab TabID) Title() string {
 		return moduleTitleFirewall
 	case TabFirewallPorts:
 		return firewallPortsTitleText
-	case TabAlerts:
-		return moduleTitleAlerts
-	case TabSettings:
-		return moduleTitleSettings
+	case TabAlertsStatus:
+		return tabTitleAlertsStatus
+	case TabAlertsPreview:
+		return tabTitleAlertsPreview
+	case TabSettingsTelegram:
+		return tabTitleSettingsTelegram
+	case TabSettingsDisplay:
+		return tabTitleSettingsDisplay
 	default:
 		return tabTitleChanges
 	}

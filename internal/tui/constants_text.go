@@ -96,6 +96,8 @@ const (
 	hintSidebar        = "b sidebar"
 	hintMove           = "j/k move"
 	hintEnds           = "g/G top/bottom"
+	hintFormMove       = "j/k move"
+	hintFormEnter      = "enter edit/select"
 	hintSort           = "s sort"
 	hintMinimum        = "f min-sev"
 	hintFilter         = "/ filter"

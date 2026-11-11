@@ -46,11 +46,11 @@ var moduleSpecs = [moduleCount]moduleSpec{
 	},
 	ModuleAlerts: {
 		title: moduleTitleAlerts, compactLabel: moduleCompactAlerts,
-		innerTabs: []innerTabSpec{{TabAlerts, moduleTitleAlerts}},
+		innerTabs: []innerTabSpec{{TabAlertsStatus, tabTitleAlertsStatus}, {TabAlertsPreview, tabTitleAlertsPreview}},
 	},
 	ModuleSettings: {
 		title: moduleTitleSettings, compactLabel: moduleCompactSettings,
-		innerTabs: []innerTabSpec{{TabSettings, moduleTitleSettings}},
+		innerTabs: []innerTabSpec{{TabSettingsTelegram, tabTitleSettingsTelegram}, {TabSettingsDisplay, tabTitleSettingsDisplay}},
 	},
 }
 
@@ -82,9 +82,4 @@ func (module Module) compactLabel() string {
 // innerTabs lists the inner tabs of the module in display order.
 func (module Module) innerTabs() []innerTabSpec {
 	return moduleSpecs[module].innerTabs
-}
-
-// isPlaceholder tells whether the module is not implemented yet.
-func (module Module) isPlaceholder() bool {
-	return module == ModuleAlerts || module == ModuleSettings
 }
