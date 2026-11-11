@@ -1,0 +1,22 @@
+[
+  {
+    "Id": "a1",
+    "Names": ["/web"],
+    "Ports": [
+      {"IP": "0.0.0.0", "PrivatePort": 80, "PublicPort": 8080, "Type": "tcp"},
+      {"IP": "::", "PrivatePort": 80, "PublicPort": 8080, "Type": "tcp"},
+      {"PrivatePort": 9000, "Type": "tcp"}
+    ]
+  },
+  {
+    "Id": "b2",
+    "Names": ["/db"],
+    "Ports": [{"IP": "127.0.0.1", "PrivatePort": 5432, "PublicPort": 5432, "Type": "tcp"}]
+  },
+  {
+    "Id": "c3",
+    "Names": ["/dns"],
+    "Ports": [{"IP": "0.0.0.0", "PrivatePort": 53, "PublicPort": 53, "Type": "udp"}]
+  },
+  {"Id": "d4", "Names": ["/idle"], "Ports": []}
+]
