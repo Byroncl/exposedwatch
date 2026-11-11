@@ -55,6 +55,7 @@ const (
 // Footer hint drop ranks: higher ranks disappear first on narrow terminals.
 const (
 	dropRankNever = iota
+	dropRankInbound
 	dropRankLoopback
 	dropRankMove
 	dropRankRefresh

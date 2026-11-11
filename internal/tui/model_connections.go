@@ -43,10 +43,20 @@ func (model *Model) toggleLoopback() {
 	model.rebuildVisibleRows()
 }
 
+// toggleInboundOnly shows only inbound connections, or all of them again. It
+// only acts on the Connections tab.
+func (model *Model) toggleInboundOnly() {
+	if model.activeTab != TabConnections || !model.connectionsEnabled() {
+		return
+	}
+	model.inboundOnly = !model.inboundOnly
+	model.rebuildVisibleRows()
+}
+
 // refreshConnectionCaches recomputes the summary of the connections that pass
-// the loopback toggle and the count that also passes the text filter.
+// the toggles and the count that also passes the text filter.
 func (model *Model) refreshConnectionCaches() {
-	connections := model.connectionsPassingLoopbackToggle()
+	connections := model.connectionsPassingToggles()
 	model.connectionSummary = app.SummarizeConnections(connections)
 	displayed := 0
 	for _, connection := range connections {

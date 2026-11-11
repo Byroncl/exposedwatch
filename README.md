@@ -81,6 +81,7 @@ The first successful scan is the baseline: nothing is flagged. After each later 
 | `f` | Cycle minimum severity filter (Findings and All ports; ignored on Connections) |
 | `/` | Free-text filter (`enter` applies, `esc` cancels; on Connections it matches remote address, remote port and process) |
 | `l` | Show or hide loopback-to-loopback connections (Connections; hidden by default) |
+| `i` | Show only inbound connections, or all of them (Connections; all shown by default) |
 | `?` | Toggle help |
 | `q` / `ctrl+c` | Quit |
 
@@ -88,9 +89,24 @@ The first successful scan is the baseline: nothing is flagged. After each later 
 
 The Connections tab lists the established TCP connections of this host, read from `/proc/net/tcp` and `/proc/net/tcp6` on every refresh. Each row shows the direction (`IN` when the local port is one this host listens on, `OUT` otherwise), the local port (and bind address when there is room), the remote `address:port`, the state, the process (`-` when unknown) and the age: how long this session has been seeing that connection (`12s`, `4m`, `1h`, `2d`). Inbound connections that appeared since the previous refresh get a `NEW` badge for 5 refreshes; the first read is the baseline and flags nothing. Rows are ordered inbound first, then by local port and remote address.
 
-Loopback-to-loopback connections (local services talking to each other) are hidden by default because they are noise; press `l` to show them. The title and the footer say whether they are hidden. Below the table, two panels list the busiest remote addresses and the inbound connection count per local port, computed from the same connections as the table (so they follow `l`). A failed read keeps the previous rows and shows a warning line, and it never delays the port scan, which refreshes independently. If the number of connections reaches the reader's limit, a notice shows how many were read.
+Loopback-to-loopback connections (local services talking to each other) are hidden by default because they are noise; press `l` to show them. The title and the footer say whether they are hidden. Below the table, two panels list the busiest remote addresses and the inbound connection count per local port, computed from the same connections as the table (so they follow `l` and `i`). A failed read keeps the previous rows and shows a warning line, and it never delays the port scan, which refreshes independently. If the number of connections reaches the reader's limit, a notice shows how many were read.
+
+Press `i` to keep only the inbound (`IN`) connections; the title and the footer show `inbound:only` or `inbound:all`. It combines with `l`, the `/` filter and every sort order. The table, the tab count and the header counter `conn N (in X / out Y)` all describe what is visible, so with `i` on the counter reads `out 0`; the two panels already list inbound traffic only. Your selection stays on the same row when that row is still visible.
 
 Everything stays in memory: remote addresses are shown on screen only, never written to disk or logged, and they are not resolved through DNS.
+
+#### How to read it
+
+A connection here is an open TCP session between this machine and another one. Only `established` sessions are listed, that is, conversations that are happening right now.
+
+| Direction | What it means | Does it matter for security? |
+| --------- | ------------- | ---------------------------- |
+| `IN` | Someone else connected to a port this host listens on. | Yes, this is the traffic to review: it is how other machines reach your services. |
+| `OUT` | This host connected to someone else's service. | Usually not by itself. It shows what your programs talk to. |
+
+- Many `OUT` rows are normal on a desktop: browser, chat, sync and update clients keep several connections open. Their remote addresses often belong to large cloud or CDN providers. They are shown as numbers, not names, because exposedwatch does no DNS lookup on purpose.
+- Look first at `IN` rows coming from public addresses to ports you did not expect, for example a database or SSH.
+- Tips: `i` shows inbound only, `s` changes the sort, `/` filters by process or address, `l` shows loopback traffic, and `sudo` is needed to see process names.
 
 Limitations:
 

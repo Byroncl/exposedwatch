@@ -50,6 +50,8 @@ func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 		model.switchTab(TabConnections)
 	case ActionToggleLoopback:
 		model.toggleLoopback()
+	case ActionToggleInboundOnly:
+		model.toggleInboundOnly()
 	case ActionCycleSort, ActionCycleMinimumSeverity, ActionStartSearch:
 		model.handleFilteringAction(action)
 	}

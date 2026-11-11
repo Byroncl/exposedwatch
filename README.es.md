@@ -81,6 +81,7 @@ El primer escaneo exitoso es la línea base: no se marca nada. Tras cada actuali
 | `f` | Cambiar el filtro de severidad mínima (Findings y All ports; se ignora en Connections) |
 | `/` | Filtro de texto libre (`enter` aplica, `esc` cancela; en Connections busca en dirección remota, puerto remoto y proceso) |
 | `l` | Mostrar u ocultar las conexiones de loopback a loopback (Connections; ocultas por defecto) |
+| `i` | Mostrar solo las conexiones entrantes, o todas (Connections; por defecto se muestran todas) |
 | `?` | Mostrar u ocultar la ayuda |
 | `q` / `ctrl+c` | Salir |
 
@@ -88,9 +89,24 @@ El primer escaneo exitoso es la línea base: no se marca nada. Tras cada actuali
 
 La pestaña Connections lista las conexiones TCP establecidas de este equipo, leídas de `/proc/net/tcp` y `/proc/net/tcp6` en cada actualización. Cada fila muestra la dirección (`IN` cuando el puerto local es uno en el que este equipo escucha, `OUT` en caso contrario), el puerto local (y la dirección de enlace cuando hay espacio), la `dirección:puerto` remota, el estado, el proceso (`-` si se desconoce) y la antigüedad: cuánto tiempo lleva esta sesión viendo esa conexión (`12s`, `4m`, `1h`, `2d`). Las conexiones entrantes que aparecieron desde la actualización anterior reciben la marca `NEW` durante 5 actualizaciones; la primera lectura es la línea base y no marca nada. Las filas se ordenan primero las entrantes y luego por puerto local y dirección remota.
 
-Las conexiones de loopback a loopback (servicios locales que hablan entre sí) están ocultas por defecto porque son ruido; pulsa `l` para mostrarlas. El título y el pie indican si están ocultas. Bajo la tabla, dos paneles listan las direcciones remotas más activas y el número de conexiones entrantes por puerto local, calculados con las mismas conexiones que la tabla (por eso siguen a `l`). Una lectura fallida conserva las filas anteriores y muestra una línea de advertencia; nunca retrasa el escaneo de puertos, que se actualiza de forma independiente. Si el número de conexiones alcanza el límite del lector, un aviso indica cuántas se leyeron.
+Las conexiones de loopback a loopback (servicios locales que hablan entre sí) están ocultas por defecto porque son ruido; pulsa `l` para mostrarlas. El título y el pie indican si están ocultas. Bajo la tabla, dos paneles listan las direcciones remotas más activas y el número de conexiones entrantes por puerto local, calculados con las mismas conexiones que la tabla (por eso siguen a `l` e `i`). Una lectura fallida conserva las filas anteriores y muestra una línea de advertencia; nunca retrasa el escaneo de puertos, que se actualiza de forma independiente. Si el número de conexiones alcanza el límite del lector, un aviso indica cuántas se leyeron.
+
+Pulsa `i` para dejar solo las conexiones entrantes (`IN`); el título y el pie muestran `inbound:only` o `inbound:all`. Se combina con `l`, con el filtro `/` y con todos los órdenes. La tabla, el contador de la pestaña y el contador de la cabecera `conn N (in X / out Y)` describen lo que está visible, así que con `i` activo el contador muestra `out 0`; los dos paneles ya listan solo tráfico entrante. La selección se mantiene en la misma fila mientras esa fila siga visible.
 
 Todo permanece en memoria: las direcciones remotas solo se muestran en pantalla, nunca se escriben en disco ni se registran, y no se resuelven por DNS.
+
+#### Cómo interpretarla
+
+Una conexión, aquí, es una sesión TCP abierta entre este equipo y otro. Solo se listan las sesiones `established`, es decir, conversaciones que están ocurriendo ahora mismo.
+
+| Dirección | Qué significa | ¿Importa para la seguridad? |
+| --------- | ------------- | --------------------------- |
+| `IN` | Otro equipo se conectó a un puerto en el que este equipo escucha. | Sí, es el tráfico que hay que revisar: así llegan otros equipos a tus servicios. |
+| `OUT` | Este equipo se conectó al servicio de otro. | Normalmente no por sí sola. Muestra con qué hablan tus programas. |
+
+- Es normal ver muchas filas `OUT` en un equipo de escritorio: el navegador, el chat, la sincronización y las actualizaciones mantienen varias conexiones abiertas. Sus direcciones remotas suelen pertenecer a grandes proveedores de nube o CDN. Se muestran como números y no como nombres porque exposedwatch no hace consultas DNS a propósito.
+- Fíjate primero en las filas `IN` que vienen de direcciones públicas hacia puertos que no esperabas, por ejemplo una base de datos o SSH.
+- Consejos: `i` muestra solo las entrantes, `s` cambia el orden, `/` filtra por proceso o dirección, `l` muestra el tráfico de loopback y hace falta `sudo` para ver los nombres de proceso.
 
 Limitaciones:
 

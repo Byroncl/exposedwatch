@@ -55,9 +55,13 @@ const (
 
 // Connection table panel and messages.
 const (
-	connectionStatusFormat     = "· sort:%s loopback:%s"
+	connectionStatusFormat     = "· sort:%s loopback:%s inbound:%s"
 	loopbackStateHidden        = "hidden"
 	loopbackStateShown         = "shown"
+	inboundStateOnly           = "only"
+	inboundStateAll            = "all"
+	inboundFooterFormat        = "i inbound:%s"
+	inboundOnlyEmptyMessage    = "No inbound connections to show; press i to show all."
 	connectionsDisabledMessage = "Connections are disabled (started with --no-connections)."
 	connectionsReadingMessage  = "Reading connections..."
 	connectionsUnavailableText = "Connections could not be read yet; see the warning above."
