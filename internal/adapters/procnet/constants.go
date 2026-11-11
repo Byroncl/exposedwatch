@@ -12,8 +12,15 @@ type SocketInode string
 // DefaultProcRoot is where the proc filesystem is normally mounted.
 const DefaultProcRoot = "/proc"
 
-// SocketStateListen is the TCP LISTEN state code.
-const SocketStateListen SocketState = "0A"
+// Socket state codes of the TCP tables.
+const (
+	SocketStateListen      SocketState = "0A"
+	SocketStateEstablished SocketState = "01"
+)
+
+// DefaultConnectionLimit caps how many established connections one read
+// returns, so a huge table cannot exhaust memory.
+const DefaultConnectionLimit = 10000
 
 // Names inside the proc tree.
 const (
@@ -37,11 +44,12 @@ const (
 
 // Column layout of a socket row.
 const (
-	minimumColumnCount      = 10
-	localAddressColumnIndex = 1
-	stateColumnIndex        = 3
-	inodeColumnIndex        = 9
-	addressPortSeparator    = ":"
+	minimumColumnCount       = 10
+	localAddressColumnIndex  = 1
+	remoteAddressColumnIndex = 2
+	stateColumnIndex         = 3
+	inodeColumnIndex         = 9
+	addressPortSeparator     = ":"
 )
 
 // Numeric decoding parameters.
@@ -59,4 +67,5 @@ const (
 	noTableReadableMessage  = "procnet: no socket table readable: %w"
 	unexpectedLengthMessage = "procnet: unexpected address length %d"
 	invalidAddressMessage   = "procnet: invalid address"
+	invalidEndpointMessage  = "procnet: invalid endpoint"
 )
