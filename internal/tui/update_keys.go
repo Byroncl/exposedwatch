@@ -33,10 +33,7 @@ func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case ActionJumpBottom:
 		model.setCursor(len(model.visibleRows) - 1)
 	case ActionRefresh:
-		if !model.refreshing {
-			model.refreshing = true
-			return model, scanCommand(model.scanner, model.clock)
-		}
+		return model, tea.Batch(model.startIdleReads()...)
 	case ActionToggleHelp:
 		model.viewState = ViewHelp
 	case ActionNextTab:
@@ -49,29 +46,61 @@ func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 		model.switchTab(TabAllPorts)
 	case ActionShowChanges:
 		model.switchTab(TabChanges)
+	case ActionShowConnections:
+		model.switchTab(TabConnections)
+	case ActionToggleLoopback:
+		model.toggleLoopback()
 	case ActionCycleSort, ActionCycleMinimumSeverity, ActionStartSearch:
 		model.handleFilteringAction(action)
 	}
 	return model, nil
 }
 
-// handleFilteringAction applies sort, severity and search keys. They only
-// exist on the tabs whose rows can be filtered; the Changes tab ignores them.
+// handleFilteringAction applies sort, severity and search keys. Each key only
+// acts on the tabs that support it: the Changes tab ignores all three and the
+// Connections tab has no severity filter.
 func (model *Model) handleFilteringAction(action Action) {
-	if !model.activeTab.supportsFiltering() {
-		return
-	}
 	switch action {
 	case ActionCycleSort:
-		model.sortMode = model.sortMode.Next()
+		if !model.acceptsSortAndSearch() {
+			return
+		}
+		if model.activeTab == TabConnections {
+			model.connectionSortMode = model.connectionSortMode.Next()
+		} else {
+			model.sortMode = model.sortMode.Next()
+		}
 		model.rebuildVisibleRows()
 	case ActionCycleMinimumSeverity:
+		if !model.activeTab.supportsMinimumSeverity() {
+			return
+		}
 		model.minSeverity = nextMinimumSeverity(model.minSeverity)
 		model.rebuildVisibleRows()
 	case ActionStartSearch:
+		if !model.acceptsSortAndSearch() {
+			return
+		}
 		model.viewState = ViewFilterInput
-		model.filterInput = model.filterText
+		model.filterInput = model.activeFilterText()
 	}
+}
+
+// activeFilterText is the free-text filter of the active tab. The Connections
+// tab keeps its own, so a port filter never hides connections.
+func (model Model) activeFilterText() string {
+	if model.activeTab == TabConnections {
+		return model.connectionFilterText
+	}
+	return model.filterText
+}
+
+func (model *Model) setActiveFilterText(text string) {
+	if model.activeTab == TabConnections {
+		model.connectionFilterText = text
+		return
+	}
+	model.filterText = text
 }
 
 func (model Model) handleHelpKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -89,11 +118,11 @@ func (model Model) handleFilterInputKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd
 	case tea.KeyCtrlC:
 		return model, tea.Quit
 	case tea.KeyEnter:
-		model.filterText = strings.TrimSpace(model.filterInput)
+		model.setActiveFilterText(strings.TrimSpace(model.filterInput))
 		model.viewState = ViewTable
 		model.rebuildVisibleRows()
 	case tea.KeyEsc:
-		model.filterInput = model.filterText
+		model.filterInput = model.activeFilterText()
 		model.viewState = ViewTable
 	case tea.KeyBackspace:
 		runes := []rune(model.filterInput)

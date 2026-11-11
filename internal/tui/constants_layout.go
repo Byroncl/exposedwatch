@@ -47,11 +47,15 @@ const (
 	priorityBind
 	prioritySource
 	priorityKind
+	priorityConnectionAge
+	priorityConnectionState
+	priorityLocalBind
 )
 
 // Footer hint drop ranks: higher ranks disappear first on narrow terminals.
 const (
 	dropRankNever = iota
+	dropRankLoopback
 	dropRankMove
 	dropRankRefresh
 	dropRankSort

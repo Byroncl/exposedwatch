@@ -9,7 +9,7 @@ import (
 
 // tabCounts returns the number shown next to each tab title.
 func (model Model) tabCounts() [tabCount]int {
-	return [tabCount]int{len(model.report.Findings), len(model.report.Ports), len(model.tracker.log)}
+	return [tabCount]int{len(model.report.Findings), len(model.report.Ports), len(model.tracker.log), model.connectionDisplayCount}
 }
 
 // tabLine renders the tab strip. The active tab is bracketed and highlighted.

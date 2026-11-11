@@ -35,13 +35,20 @@ type tableSpec struct {
 	fixed       []column
 	flexHeading string
 	flexContent func(palette styles, row displayRow) cell
+	// minFlexWidth is the width kept for the flexible column before optional
+	// fixed columns are added.
+	minFlexWidth int
 }
 
 func tableSpecFor(tab TabID) tableSpec {
-	if tab == TabChanges {
+	switch tab {
+	case TabChanges:
 		return changesSpec()
+	case TabConnections:
+		return connectionsSpec()
+	default:
+		return portsSpec()
 	}
-	return portsSpec()
 }
 
 func portsSpec() tableSpec {
@@ -55,8 +62,9 @@ func portsSpec() tableSpec {
 			{headingSource, sourceColumnWidth, prioritySource, 0, sourceCell},
 			{headingProcessShort, processColumnWidth, priorityProcess, 0, processCell},
 		},
-		flexHeading: headingFinding,
-		flexContent: findingTitleCell,
+		flexHeading:  headingFinding,
+		flexContent:  findingTitleCell,
+		minFlexWidth: minTitleWidth,
 	}
 }
 
@@ -70,13 +78,14 @@ func changesSpec() tableSpec {
 			{headingBind, bindColumnWidth, priorityBind, 0, bindCell},
 			{headingSource, sourceColumnWidth, prioritySource, 0, sourceCell},
 		},
-		flexHeading: headingProcess,
-		flexContent: processCell,
+		flexHeading:  headingProcess,
+		flexContent:  processCell,
+		minFlexWidth: minTitleWidth,
 	}
 }
 
 // layoutColumns keeps the columns that fit, in priority order, while leaving
-// at least minTitleWidth cells for the flexible column. It returns the kept
+// at least minFlexWidth cells for the flexible column. It returns the kept
 // columns in display order and the width of the flexible column.
 func (spec tableSpec) layoutColumns(contentWidth int) ([]column, int) {
 	used := selectionMarkWidth + len(columnSeparator)
@@ -91,7 +100,7 @@ func (spec tableSpec) layoutColumns(contentWidth int) ([]column, int) {
 	for _, index := range order {
 		candidate := spec.fixed[index]
 		cost := candidate.width + len(columnSeparator)
-		if candidate.priority != priorityMandatory && contentWidth-(used+cost) < minTitleWidth {
+		if candidate.priority != priorityMandatory && contentWidth-(used+cost) < spec.minFlexWidth {
 			continue
 		}
 		kept[index] = true

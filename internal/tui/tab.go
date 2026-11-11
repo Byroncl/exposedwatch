@@ -8,6 +8,7 @@ const (
 	TabFindings TabID = iota
 	TabAllPorts
 	TabChanges
+	TabConnections
 	tabCount
 )
 
@@ -28,12 +29,19 @@ func (tab TabID) Title() string {
 		return tabTitleFindings
 	case TabAllPorts:
 		return tabTitleAllPorts
+	case TabConnections:
+		return tabTitleConnections
 	default:
 		return tabTitleChanges
 	}
 }
 
-// supportsFiltering tells whether sort, severity filter and search apply.
-func (tab TabID) supportsFiltering() bool {
+// supportsMinimumSeverity tells whether the minimum severity filter applies.
+func (tab TabID) supportsMinimumSeverity() bool {
+	return tab == TabFindings || tab == TabAllPorts
+}
+
+// supportsSortAndSearch tells whether sort and free-text search apply.
+func (tab TabID) supportsSortAndSearch() bool {
 	return tab != TabChanges
 }

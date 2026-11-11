@@ -24,7 +24,7 @@ func TestTabsAreVisuallySeparated(testRun *testing.T) {
 func TestTabStripWidthDoesNotChangeWithTheActiveTab(testRun *testing.T) {
 	model := newTestModel(testRun)
 	baselineWidth := lipgloss.Width(model.tabLine(fullTabStripWidth))
-	for _, key := range []string{"2", "3", "1"} {
+	for _, key := range []string{"2", "3", "4", "1"} {
 		model = typeKeys(testRun, model, key)
 		if gotWidth := lipgloss.Width(model.tabLine(fullTabStripWidth)); gotWidth != baselineWidth {
 			testRun.Errorf("key %q: width %d, want %d (the strip must not jump)", key, gotWidth, baselineWidth)

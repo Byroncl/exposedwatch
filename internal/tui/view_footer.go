@@ -19,14 +19,14 @@ func (model Model) footerLine(width int) string {
 func (model Model) footerHintTexts(width int) []string {
 	active := make([]footerHint, 0, len(footerHints))
 	for _, hint := range footerHints {
-		if hint.AppliesToTabs[model.activeTab] {
+		if hint.AppliesToTabs[model.activeTab] && !(hint.NeedsConnections && model.activeTab == TabConnections && !model.connectionsEnabled()) {
 			active = append(active, hint)
 		}
 	}
 	for {
 		texts := make([]string, 0, len(active))
 		for _, hint := range active {
-			texts = append(texts, hint.Text)
+			texts = append(texts, hint.textFor(model))
 		}
 		dropIndex := mostDroppable(active)
 		if len(strings.Join(texts, footerHintJoin)) <= width || dropIndex < 0 {
@@ -45,4 +45,12 @@ func mostDroppable(hints []footerHint) int {
 		}
 	}
 	return best
+}
+
+// textFor returns the hint text, built from the model when the hint is dynamic.
+func (hint footerHint) textFor(model Model) string {
+	if hint.Label != nil {
+		return hint.Label(model)
+	}
+	return hint.Text
 }

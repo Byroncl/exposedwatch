@@ -83,3 +83,33 @@ func TestUsageMentionsThemeFlag(testRun *testing.T) {
 		testRun.Fatalf("usage lacks --theme: %q", stdout)
 	}
 }
+
+func TestParseTuiOptionsConnectionsAreEnabledByDefault(testRun *testing.T) {
+	options, err := parseTuiOptions(nil, &strings.Builder{})
+	if err != nil || options.NoConnections {
+		testRun.Fatalf("options=%+v err=%v", options, err)
+	}
+}
+
+func TestParseTuiOptionsAcceptsNoConnections(testRun *testing.T) {
+	options, err := parseTuiOptions([]string{"--no-connections"}, &strings.Builder{})
+	if err != nil || !options.NoConnections {
+		testRun.Fatalf("options=%+v err=%v", options, err)
+	}
+}
+
+func TestUsageMentionsNoConnectionsFlag(testRun *testing.T) {
+	_, stdout, _ := runCommand("help")
+	if !strings.Contains(stdout, "--no-connections") {
+		testRun.Fatalf("usage lacks --no-connections: %q", stdout)
+	}
+}
+
+func TestBuildConnectionSourceHonorsTheFlag(testRun *testing.T) {
+	if buildConnectionSource(TuiOptions{NoConnections: true}) != nil {
+		testRun.Fatal("--no-connections must yield no connection source")
+	}
+	if buildConnectionSource(TuiOptions{ScanOptions: ScanOptions{ProcRoot: testRun.TempDir()}}) == nil {
+		testRun.Fatal("connections must be enabled by default")
+	}
+}
