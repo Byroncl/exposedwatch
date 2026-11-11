@@ -1,0 +1,77 @@
+version: 2
+
+project_name: exposedwatch
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: exposedwatch
+    main: ./cmd/exposedwatch
+    binary: exposedwatch
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: tarball
+    formats:
+      - tar.gz
+    # Version-less names give stable "latest" download URLs.
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+nfpms:
+  - id: deb
+    package_name: exposedwatch
+    file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - deb
+    maintainer: Byroncl <https://github.com/Byroncl>
+    description: Console tool that shows what a server exposes to the network.
+    homepage: https://github.com/Byroncl/exposedwatch
+    license: Apache-2.0
+    section: utils
+    priority: optional
+    bindir: /usr/bin
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/exposedwatch/LICENSE
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs(\(.+\))?:'
+      - '^chore(\(.+\))?:'
+      - '^test(\(.+\))?:'
+
+release:
+  github:
+    owner: Byroncl
+    name: exposedwatch
