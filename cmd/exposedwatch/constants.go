@@ -24,6 +24,7 @@ const (
 // Subcommand names.
 const (
 	commandScan    = "scan"
+	commandTui     = "tui"
 	commandVersion = "version"
 )
 
@@ -34,6 +35,7 @@ const (
 	flagProcRoot     = "proc-root"
 	flagDockerSocket = "docker-socket"
 	flagNoDocker     = "no-docker"
+	flagInterval     = "interval"
 )
 
 // Flag defaults.
@@ -51,6 +53,7 @@ const (
 	usageProcRoot     = "path of the proc filesystem"
 	usageDockerSocket = "path of the Docker Engine unix socket"
 	usageNoDocker     = "skip Docker container discovery"
+	usageInterval     = "auto-refresh interval of the tui, minimum 1s"
 )
 
 // Environment variables.
@@ -62,13 +65,18 @@ const (
 
 Commands:
   scan      list listening ports and flag risky exposure
+  tui       interactive full-screen view that refreshes automatically
   version   print the version
 
-Run "exposedwatch scan -h" for scan flags.
+Run "exposedwatch scan -h" or "exposedwatch tui -h" for flags.
 Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 `
 	versionFormat        = "exposedwatch %s"
 	scanFlagSetName      = "scan"
+	tuiFlagSetName       = "tui"
+	nonTerminalMessage   = "the tui command needs an interactive terminal (stdout is not a terminal); use \"exposedwatch scan\" for non-interactive output"
+	invalidIntervalFmt   = "invalid --interval %v: must be at least %v"
+	tuiFailedFormat      = "tui failed: %v"
 	invalidFormatMessage = "invalid --format %q: want table or json"
 	invalidSeverityFmt   = "invalid --min-severity: %v"
 	unexpectedArgsFmt    = "unexpected arguments: %v"
