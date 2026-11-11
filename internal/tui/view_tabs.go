@@ -44,5 +44,8 @@ func (model Model) renderTabs(compact bool) string {
 			parts = append(parts, model.styles.tabInactive.Render(label))
 		}
 	}
-	return strings.Join(parts, tabSeparator)
+	// A dimmed divider with a gap on both sides keeps the tabs from looking
+	// glued together; it has the same width whichever tab is active.
+	separator := tabGap + model.styles.dim.Render(tabDivider) + tabGap
+	return strings.Join(parts, separator)
 }
