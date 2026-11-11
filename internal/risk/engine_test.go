@@ -6,91 +6,99 @@ import (
 	"github.com/Byroncl/exposedwatch/internal/domain"
 )
 
-func port(n int, addr string) domain.Port {
-	return domain.Port{Number: n, Protocol: domain.TCP, BindAddress: addr, Source: domain.SourceHost}
+const (
+	portHTTPAlt   = 8080
+	portGenericHi = 9000
+	addrAll       = "0.0.0.0"
+	addrAllIPv6   = "::"
+	addrLoopback  = "127.0.0.1"
+)
+
+func newPort(number int, address string) domain.Port {
+	return domain.Port{Number: number, Protocol: domain.TCP, BindAddress: address, Source: domain.SourceHost}
 }
 
-func TestEvaluateRules(t *testing.T) {
-	tests := []struct {
+func TestEvaluateRules(testRun *testing.T) {
+	testCases := []struct {
 		name     string
 		port     domain.Port
 		wantNone bool
 		want     domain.Severity
 	}{
-		{"ssh all interfaces", port(22, "0.0.0.0"), false, domain.Medium},
-		{"telnet all interfaces", port(23, "::"), false, domain.Critical},
-		{"mysql all", port(3306, "0.0.0.0"), false, domain.High},
-		{"postgres all", port(5432, ""), false, domain.High},
-		{"redis all", port(6379, "0.0.0.0"), false, domain.High},
-		{"mongo all", port(27017, "0.0.0.0"), false, domain.High},
-		{"elasticsearch all", port(9200, "0.0.0.0"), false, domain.High},
-		{"memcached all", port(11211, "0.0.0.0"), false, domain.High},
-		{"redis private lan", port(6379, "192.168.1.5"), false, domain.High},
-		{"docker api all", port(2375, "0.0.0.0"), false, domain.Critical},
-		{"rdp all", port(3389, "0.0.0.0"), false, domain.High},
-		{"smb 445", port(445, "0.0.0.0"), false, domain.High},
-		{"smb 139", port(139, "0.0.0.0"), false, domain.High},
-		{"ssh public ip", port(22, "203.0.113.5"), false, domain.Medium},
-		{"ssh private only", port(22, "10.0.0.2"), true, 0},
-		{"generic all interfaces", port(8080, "0.0.0.0"), false, domain.Info},
-		{"generic private", port(8080, "10.0.0.2"), true, 0},
-		{"redis loopback", port(6379, "127.0.0.1"), true, 0},
-		{"docker api loopback ipv6", port(2375, "::1"), true, 0},
-		{"generic loopback", port(8080, "127.0.0.1"), true, 0},
+		{"ssh all interfaces", newPort(PortSSH, addrAll), false, domain.Medium},
+		{"telnet all interfaces", newPort(PortTelnet, addrAllIPv6), false, domain.Critical},
+		{"mysql all", newPort(PortMySQL, addrAll), false, domain.High},
+		{"postgres all", newPort(PortPostgreSQL, ""), false, domain.High},
+		{"redis all", newPort(PortRedis, addrAll), false, domain.High},
+		{"mongo all", newPort(PortMongoDB, addrAll), false, domain.High},
+		{"elasticsearch all", newPort(PortElasticsearch, addrAll), false, domain.High},
+		{"memcached all", newPort(PortMemcached, addrAll), false, domain.High},
+		{"redis private lan", newPort(PortRedis, "192.168.1.5"), false, domain.High},
+		{"docker api all", newPort(PortDockerAPI, addrAll), false, domain.Critical},
+		{"rdp all", newPort(PortRDP, addrAll), false, domain.High},
+		{"smb 445", newPort(PortSMB, addrAll), false, domain.High},
+		{"smb 139", newPort(PortNetBIOS, addrAll), false, domain.High},
+		{"ssh public ip", newPort(PortSSH, "203.0.113.5"), false, domain.Medium},
+		{"ssh private only", newPort(PortSSH, "10.0.0.2"), true, 0},
+		{"generic all interfaces", newPort(portHTTPAlt, addrAll), false, domain.Info},
+		{"generic private", newPort(portHTTPAlt, "10.0.0.2"), true, 0},
+		{"redis loopback", newPort(PortRedis, addrLoopback), true, 0},
+		{"docker api loopback ipv6", newPort(PortDockerAPI, "::1"), true, 0},
+		{"generic loopback", newPort(portHTTPAlt, addrLoopback), true, 0},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := Evaluate([]domain.Port{tt.port})
-			if tt.wantNone {
-				if len(got) != 0 {
-					t.Fatalf("expected no findings, got %+v", got)
+	for _, testCase := range testCases {
+		testRun.Run(testCase.name, func(subRun *testing.T) {
+			findings := Evaluate([]domain.Port{testCase.port})
+			if testCase.wantNone {
+				if len(findings) != 0 {
+					subRun.Fatalf("expected no findings, got %+v", findings)
 				}
 				return
 			}
-			if len(got) != 1 {
-				t.Fatalf("expected 1 finding, got %+v", got)
+			if len(findings) != 1 {
+				subRun.Fatalf("expected 1 finding, got %+v", findings)
 			}
-			f := got[0]
-			if f.Severity != tt.want {
-				t.Errorf("severity = %v, want %v", f.Severity, tt.want)
+			finding := findings[0]
+			if finding.Severity != testCase.want {
+				subRun.Errorf("severity = %v, want %v", finding.Severity, testCase.want)
 			}
-			if f.RuleID == "" || f.Title == "" || f.Recommendation == "" {
-				t.Errorf("incomplete finding: %+v", f)
+			if finding.RuleID == "" || finding.Title == "" || finding.Recommendation == "" {
+				subRun.Errorf("incomplete finding: %+v", finding)
 			}
-			if f.Port.Number != tt.port.Number {
-				t.Errorf("finding port = %d, want %d", f.Port.Number, tt.port.Number)
+			if finding.Port.Number != testCase.port.Number {
+				subRun.Errorf("finding port = %d, want %d", finding.Port.Number, testCase.port.Number)
 			}
 		})
 	}
 }
 
-func TestEvaluateEmpty(t *testing.T) {
-	if got := Evaluate(nil); len(got) != 0 {
-		t.Fatalf("nil input: got %+v", got)
+func TestEvaluateEmpty(testRun *testing.T) {
+	if findings := Evaluate(nil); len(findings) != 0 {
+		testRun.Fatalf("nil input: got %+v", findings)
 	}
-	if got := Evaluate([]domain.Port{}); len(got) != 0 {
-		t.Fatalf("empty input: got %+v", got)
+	if findings := Evaluate([]domain.Port{}); len(findings) != 0 {
+		testRun.Fatalf("empty input: got %+v", findings)
 	}
 }
 
-func TestEvaluateSorting(t *testing.T) {
-	in := []domain.Port{
-		port(9000, "0.0.0.0"), // info
-		port(6379, "0.0.0.0"), // high
-		port(23, "0.0.0.0"),   // critical
-		port(3306, "0.0.0.0"), // high
-		port(8080, "0.0.0.0"), // info
-		port(22, "127.0.0.1"), // none
-		port(22, "0.0.0.0"),   // medium
+func TestEvaluateSorting(testRun *testing.T) {
+	input := []domain.Port{
+		newPort(portGenericHi, addrAll), // info
+		newPort(PortRedis, addrAll),     // high
+		newPort(PortTelnet, addrAll),    // critical
+		newPort(PortMySQL, addrAll),     // high
+		newPort(portHTTPAlt, addrAll),   // info
+		newPort(PortSSH, addrLoopback),  // none
+		newPort(PortSSH, addrAll),       // medium
 	}
-	got := Evaluate(in)
-	wantPorts := []int{23, 3306, 6379, 22, 8080, 9000}
-	if len(got) != len(wantPorts) {
-		t.Fatalf("got %d findings, want %d: %+v", len(got), len(wantPorts), got)
+	findings := Evaluate(input)
+	wantPorts := []int{PortTelnet, PortMySQL, PortRedis, PortSSH, portHTTPAlt, portGenericHi}
+	if len(findings) != len(wantPorts) {
+		testRun.Fatalf("got %d findings, want %d: %+v", len(findings), len(wantPorts), findings)
 	}
-	for i, n := range wantPorts {
-		if got[i].Port.Number != n {
-			t.Errorf("position %d: port %d, want %d", i, got[i].Port.Number, n)
+	for position, wantPort := range wantPorts {
+		if findings[position].Port.Number != wantPort {
+			testRun.Errorf("position %d: port %d, want %d", position, findings[position].Port.Number, wantPort)
 		}
 	}
 }

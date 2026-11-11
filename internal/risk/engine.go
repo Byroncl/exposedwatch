@@ -11,55 +11,55 @@ import (
 // descending and then port number ascending. Loopback-only ports yield none.
 func Evaluate(ports []domain.Port) []domain.Finding {
 	findings := make([]domain.Finding, 0, len(ports))
-	for _, p := range ports {
-		if f, ok := evaluatePort(p); ok {
-			findings = append(findings, f)
+	for _, port := range ports {
+		if finding, found := evaluatePort(port); found {
+			findings = append(findings, finding)
 		}
 	}
-	sort.SliceStable(findings, func(i, j int) bool {
-		a, b := findings[i], findings[j]
-		if a.Severity != b.Severity {
-			return a.Severity > b.Severity
+	sort.SliceStable(findings, func(left, right int) bool {
+		leftFinding, rightFinding := findings[left], findings[right]
+		if leftFinding.Severity != rightFinding.Severity {
+			return leftFinding.Severity > rightFinding.Severity
 		}
-		return a.Port.Number < b.Port.Number
+		return leftFinding.Port.Number < rightFinding.Port.Number
 	})
 	return findings
 }
 
-func evaluatePort(p domain.Port) (domain.Finding, bool) {
-	exp := p.Exposure()
-	if exp == domain.Loopback {
+func evaluatePort(port domain.Port) (domain.Finding, bool) {
+	exposure := port.Exposure()
+	if exposure == domain.Loopback {
 		return domain.Finding{}, false
 	}
-	for _, r := range builtinRules {
-		if r.matches(p.Number) {
-			if exp >= r.MinExposure {
-				return r.finding(p), true
+	for _, rule := range builtinRules {
+		if rule.matches(port.Number) {
+			if exposure >= rule.MinExposure {
+				return rule.finding(port), true
 			}
 			return domain.Finding{}, false
 		}
 	}
-	if exp >= genericRule.MinExposure {
-		return genericRule.finding(p), true
+	if exposure >= genericRule.MinExposure {
+		return genericRule.finding(port), true
 	}
 	return domain.Finding{}, false
 }
 
-func (r Rule) matches(port int) bool {
-	for _, n := range r.Ports {
-		if n == port {
+func (rule Rule) matches(portNumber int) bool {
+	for _, candidatePort := range rule.Ports {
+		if candidatePort == portNumber {
 			return true
 		}
 	}
 	return false
 }
 
-func (r Rule) finding(p domain.Port) domain.Finding {
+func (rule Rule) finding(port domain.Port) domain.Finding {
 	return domain.Finding{
-		Port:           p,
-		Severity:       r.Severity,
-		RuleID:         r.ID,
-		Title:          r.Title,
-		Recommendation: r.Recommendation,
+		Port:           port,
+		Severity:       rule.Severity,
+		RuleID:         rule.ID,
+		Title:          rule.Title,
+		Recommendation: rule.Recommendation,
 	}
 }
