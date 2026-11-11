@@ -23,9 +23,16 @@ const (
 
 // Subcommand names.
 const (
-	commandScan    = "scan"
-	commandTui     = "tui"
-	commandVersion = "version"
+	commandScan = "scan"
+	commandTui  = "tui"
+	commandHelp = "help"
+
+	// Top-level flags handled before the tui takes over a leading flag.
+	flagPrefix      = "-"
+	flagHelpShort   = "-h"
+	flagHelpLong    = "--help"
+	flagVersionLong = "--version"
+	commandVersion  = "version"
 )
 
 // Flag names.
@@ -61,14 +68,17 @@ const envNoColor = "NO_COLOR"
 
 // Messages.
 const (
-	usageText = `Usage: exposedwatch <command> [flags]
+	usageText = `Usage: exposedwatch [command] [flags]
+
+Run without a command to open the interactive view (same as "tui").
 
 Commands:
-  scan      list listening ports and flag risky exposure
-  tui       interactive full-screen view that refreshes automatically
+  tui       interactive full-screen view that refreshes automatically (default)
+  scan      one-shot report for scripts and cron (table or JSON)
   version   print the version
+  help      show this help
 
-Run "exposedwatch scan -h" or "exposedwatch tui -h" for flags.
+Run "exposedwatch tui -h" or "exposedwatch scan -h" for flags.
 Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 findings found.
 `
 	versionFormat        = "exposedwatch %s"
