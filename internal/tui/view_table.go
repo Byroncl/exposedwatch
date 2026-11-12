@@ -32,7 +32,7 @@ func (palette styles) rowGap(selected bool) lipgloss.Style {
 // tableContent returns the heading and the visible rows, padded to the table
 // height so the detail panel keeps its place.
 func (model Model) tableContent(frame layout) []string {
-	contentWidth := panelContentWidth(frame.width)
+	contentWidth := panelContentWidth(frame.contentWidth)
 	spec := tableSpecFor(model.activeTab)
 	shown, flexWidth := spec.layoutColumns(contentWidth)
 	lines := []string{model.tableHeadingLine(spec, shown, flexWidth)}
@@ -51,6 +51,8 @@ func (model Model) emptyMessage() string {
 	switch {
 	case model.activeTab == TabConnections:
 		return model.connectionsEmptyMessage()
+	case model.activeTab == TabFirewallPorts:
+		return model.firewallEmptyMessage()
 	case !model.hasReport:
 		return scanningMessage
 	case model.activeTab == TabChanges:
@@ -95,7 +97,7 @@ func (model Model) tableRowLine(index int, spec tableSpec, shown []column, flexW
 
 // tablePanel wraps the table in a titled rounded border.
 func (model Model) tablePanel(frame layout) []string {
-	return model.styles.renderPanel(model.tablePanelTitle(), model.tableContent(frame), frame.width)
+	return model.styles.renderPanel(model.tablePanelTitle(), model.tableContent(frame), frame.contentWidth)
 }
 
 // tablePanelTitle shows the tab, the cursor position and the active view options.
@@ -109,7 +111,9 @@ func (model Model) tablePanelTitle() string {
 	case TabChanges:
 		return position + panelChangesNote + columnSeparator
 	case TabConnections:
-		status = fmt.Sprintf(connectionStatusFormat, model.connectionSortMode, model.loopbackState())
+		status = fmt.Sprintf(connectionStatusFormat, model.connectionSortMode, model.loopbackState(), model.inboundState())
+	case TabFirewallPorts:
+		status = fmt.Sprintf(panelFirewallStatusFmt, model.firewallSortMode)
 	default:
 		status = fmt.Sprintf(panelStatusFormat, model.sortMode, model.minSeverity)
 	}

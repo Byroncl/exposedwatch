@@ -46,6 +46,8 @@ func tableSpecFor(tab TabID) tableSpec {
 		return changesSpec()
 	case TabConnections:
 		return connectionsSpec()
+	case TabFirewallPorts:
+		return firewallPortsSpec()
 	default:
 		return portsSpec()
 	}
@@ -61,6 +63,7 @@ func portsSpec() tableSpec {
 			{headingBind, bindColumnWidth, priorityBind, 0, bindCell},
 			{headingSource, sourceColumnWidth, prioritySource, 0, sourceCell},
 			{headingProcessShort, processColumnWidth, priorityProcess, 0, processCell},
+			{headingFirewallShort, firewallColumnWidth, priorityFirewall, 0, firewallVerdictCell},
 		},
 		flexHeading:  headingFinding,
 		flexContent:  findingTitleCell,
@@ -101,7 +104,8 @@ func (spec tableSpec) layoutColumns(contentWidth int) ([]column, int) {
 		candidate := spec.fixed[index]
 		cost := candidate.width + len(columnSeparator)
 		if candidate.priority != priorityMandatory && contentWidth-(used+cost) < spec.minFlexWidth {
-			continue
+			// Lower-priority columns never jump ahead of one that was dropped.
+			break
 		}
 		kept[index] = true
 		used += cost

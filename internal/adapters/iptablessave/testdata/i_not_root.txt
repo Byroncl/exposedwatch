@@ -1,0 +1,1 @@
+iptables-save v1.8.11 (nf_tables): Could not fetch rule set generation id: Permission denied (you must be root)

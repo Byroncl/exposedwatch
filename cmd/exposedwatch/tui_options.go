@@ -16,6 +16,11 @@ type TuiOptions struct {
 	Theme    tui.Theme
 	// NoConnections disables the Connections tab.
 	NoConnections bool
+	// NoFirewall disables the Firewall module (no firewall reads).
+	NoFirewall bool
+	// ConfigPath is the config file of the Settings and Alerts modules; empty
+	// means the default path, as for watch and notify-test.
+	ConfigPath string
 }
 
 // parseTuiOptions parses and validates tui flags.
@@ -27,6 +32,8 @@ func parseTuiOptions(arguments []string, errorOutput io.Writer) (TuiOptions, err
 	flagSet.StringVar(&options.DockerSocket, flagDockerSocket, defaultDockerSock, usageDockerSocket)
 	flagSet.BoolVar(&options.NoDocker, flagNoDocker, false, usageNoDocker)
 	flagSet.BoolVar(&options.NoConnections, flagNoConnections, false, usageNoConnections)
+	flagSet.BoolVar(&options.NoFirewall, flagNoFirewall, false, usageNoFirewall)
+	flagSet.StringVar(&options.ConfigPath, flagConfig, "", usageConfig)
 	flagSet.DurationVar(&options.Interval, flagInterval, tui.DefaultInterval, usageInterval)
 	themeName := defaultTheme
 	flagSet.StringVar(&themeName, flagTheme, defaultTheme, usageTheme)

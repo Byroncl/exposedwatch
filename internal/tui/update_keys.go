@@ -10,6 +10,8 @@ import (
 
 func (model Model) handleKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch model.viewState {
+	case ViewFieldEdit:
+		return model.handleFieldEditKey(keyPress)
 	case ViewFilterInput:
 		return model.handleFilterInputKey(keyPress)
 	case ViewHelp:
@@ -20,10 +22,58 @@ func (model Model) handleKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if keyPress.Paste {
+		// A paste is text, never a command: it only means something while editing.
+		return model, nil
+	}
 	action := actionForKey(keyPress)
 	switch action {
+	case ActionActivate:
+		if model.activeTab == TabSettingsTelegram {
+			return model.activateField()
+		}
 	case ActionQuit:
 		return model, tea.Quit
+	case ActionMoveUp, ActionMoveDown, ActionJumpTop, ActionJumpBottom:
+		model.handleCursorAction(action)
+	case ActionRefresh:
+		return model, tea.Batch(model.startIdleReads(true)...)
+	case ActionToggleHelp:
+		model.viewState = ViewHelp
+	case ActionNextModule:
+		model.openModule(model.activeModule.Next())
+	case ActionPreviousModule:
+		model.openModule(model.activeModule.Previous())
+	case ActionNextInnerTab:
+		model.cycleInnerTab(1)
+	case ActionPreviousInnerTab:
+		model.cycleInnerTab(-1)
+	case ActionJumpInnerTab:
+		if inner, isInnerTabKey := parseInnerTabKey(keyPress.String()); isInnerTabKey {
+			model.openInnerTab(inner)
+		}
+	case ActionToggleSidebar:
+		model.toggleSidebar()
+	case ActionToggleLoopback:
+		model.toggleLoopback()
+	case ActionToggleInboundOnly:
+		model.toggleInboundOnly()
+	case ActionCycleSort, ActionCycleMinimumSeverity, ActionStartSearch:
+		model.handleFilteringAction(action)
+	}
+	return model, nil
+}
+
+// handleCursorAction moves the selection. Only the table views have one.
+func (model *Model) handleCursorAction(action Action) {
+	if model.activeTab == TabSettingsTelegram {
+		model.moveFormCursor(action)
+		return
+	}
+	if !model.activeTab.isTable() {
+		return
+	}
+	switch action {
 	case ActionMoveUp:
 		model.moveCursor(-1)
 	case ActionMoveDown:
@@ -32,28 +82,7 @@ func (model Model) handleTableKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {
 		model.setCursor(0)
 	case ActionJumpBottom:
 		model.setCursor(len(model.visibleRows) - 1)
-	case ActionRefresh:
-		return model, tea.Batch(model.startIdleReads()...)
-	case ActionToggleHelp:
-		model.viewState = ViewHelp
-	case ActionNextTab:
-		model.switchTab(model.activeTab.Next())
-	case ActionPreviousTab:
-		model.switchTab(model.activeTab.Previous())
-	case ActionShowFindings:
-		model.switchTab(TabFindings)
-	case ActionShowAllPorts:
-		model.switchTab(TabAllPorts)
-	case ActionShowChanges:
-		model.switchTab(TabChanges)
-	case ActionShowConnections:
-		model.switchTab(TabConnections)
-	case ActionToggleLoopback:
-		model.toggleLoopback()
-	case ActionCycleSort, ActionCycleMinimumSeverity, ActionStartSearch:
-		model.handleFilteringAction(action)
 	}
-	return model, nil
 }
 
 // handleFilteringAction applies sort, severity and search keys. Each key only
@@ -65,11 +94,7 @@ func (model *Model) handleFilteringAction(action Action) {
 		if !model.acceptsSortAndSearch() {
 			return
 		}
-		if model.activeTab == TabConnections {
-			model.connectionSortMode = model.connectionSortMode.Next()
-		} else {
-			model.sortMode = model.sortMode.Next()
-		}
+		model.cycleActiveSort()
 		model.rebuildVisibleRows()
 	case ActionCycleMinimumSeverity:
 		if !model.activeTab.supportsMinimumSeverity() {
@@ -86,21 +111,42 @@ func (model *Model) handleFilteringAction(action Action) {
 	}
 }
 
-// activeFilterText is the free-text filter of the active tab. The Connections
-// tab keeps its own, so a port filter never hides connections.
-func (model Model) activeFilterText() string {
-	if model.activeTab == TabConnections {
-		return model.connectionFilterText
+// cycleActiveSort moves the active tab to its next sort mode. Every table
+// keeps its own mode.
+func (model *Model) cycleActiveSort() {
+	switch model.activeTab {
+	case TabConnections:
+		model.connectionSortMode = model.connectionSortMode.Next()
+	case TabFirewallPorts:
+		model.firewallSortMode = model.firewallSortMode.Next()
+	default:
+		model.sortMode = model.sortMode.Next()
 	}
-	return model.filterText
+}
+
+// activeFilterText is the free-text filter of the active tab. The Connections
+// and Firewall ports tabs keep their own, so a port filter never hides
+// connections or verdicts.
+func (model Model) activeFilterText() string {
+	switch model.activeTab {
+	case TabConnections:
+		return model.connectionFilterText
+	case TabFirewallPorts:
+		return model.firewallFilterText
+	default:
+		return model.filterText
+	}
 }
 
 func (model *Model) setActiveFilterText(text string) {
-	if model.activeTab == TabConnections {
+	switch model.activeTab {
+	case TabConnections:
 		model.connectionFilterText = text
-		return
+	case TabFirewallPorts:
+		model.firewallFilterText = text
+	default:
+		model.filterText = text
 	}
-	model.filterText = text
 }
 
 func (model Model) handleHelpKey(keyPress tea.KeyMsg) (tea.Model, tea.Cmd) {

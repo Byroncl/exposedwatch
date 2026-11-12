@@ -18,13 +18,15 @@ const (
 	ActionCycleMinimumSeverity
 	ActionStartSearch
 	ActionToggleHelp
-	ActionNextTab
-	ActionPreviousTab
-	ActionShowFindings
-	ActionShowAllPorts
-	ActionShowChanges
-	ActionShowConnections
+	ActionNextModule
+	ActionPreviousModule
+	ActionNextInnerTab
+	ActionPreviousInnerTab
+	ActionJumpInnerTab
+	ActionToggleSidebar
 	ActionToggleLoopback
+	ActionToggleInboundOnly
+	ActionActivate
 )
 
 // actionForKey maps a key press to an action when browsing the table.
@@ -50,21 +52,26 @@ func actionForKey(keyPress tea.KeyMsg) Action {
 		return ActionStartSearch
 	case keyHelp:
 		return ActionToggleHelp
-	case keyNextTab:
-		return ActionNextTab
-	case keyPreviousTab:
-		return ActionPreviousTab
-	case keyFindingsTab:
-		return ActionShowFindings
-	case keyAllPortsTab:
-		return ActionShowAllPorts
-	case keyChangesTab:
-		return ActionShowChanges
-	case keyConnectionsTab:
-		return ActionShowConnections
+	case keyNextModule:
+		return ActionNextModule
+	case keyPreviousModule:
+		return ActionPreviousModule
+	case keyNextInnerTab:
+		return ActionNextInnerTab
+	case keyPreviousInnerTab:
+		return ActionPreviousInnerTab
+	case keySidebar:
+		return ActionToggleSidebar
 	case keyLoopback:
 		return ActionToggleLoopback
+	case keyInboundOnly:
+		return ActionToggleInboundOnly
+	case keyEnter:
+		return ActionActivate
 	default:
+		if _, isInnerTabKey := parseInnerTabKey(keyPress.String()); isInnerTabKey {
+			return ActionJumpInnerTab
+		}
 		return ActionNone
 	}
 }

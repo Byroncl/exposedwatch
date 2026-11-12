@@ -10,15 +10,28 @@ func (model Model) loopbackState() string {
 	return loopbackStateShown
 }
 
+// inboundState names whether only inbound connections are shown.
+func (model Model) inboundState() string {
+	if model.inboundOnly {
+		return inboundStateOnly
+	}
+	return inboundStateAll
+}
+
+// inboundHintText is the footer hint of the inbound-only toggle.
+func inboundHintText(model Model) string {
+	return fmt.Sprintf(inboundFooterFormat, model.inboundState())
+}
+
 // loopbackHintText is the footer hint of the loopback toggle.
 func loopbackHintText(model Model) string {
 	return fmt.Sprintf(loopbackFooterFormat, model.loopbackState())
 }
 
 // connectionWarningLines lists the non-fatal connection problems. They only
-// show on the Connections tab, where they matter.
+// show on the connection views, where they matter.
 func (model Model) connectionWarningLines() []string {
-	if model.activeTab != TabConnections || !model.connectionsEnabled() {
+	if !model.activeTab.usesConnections() || !model.connectionsEnabled() {
 		return nil
 	}
 	var lines []string
@@ -42,6 +55,8 @@ func (model Model) connectionsEmptyMessage() string {
 		return connectionsReadingMessage
 	case model.connectionFilterText != "":
 		return noMatchMessage
+	case model.inboundOnly && len(model.connectionsPassingLoopbackToggle()) > 0:
+		return inboundOnlyEmptyMessage
 	case model.hideLoopback && len(model.connectionSnapshot.Connections) > 0:
 		return loopbackHiddenMessage
 	default:

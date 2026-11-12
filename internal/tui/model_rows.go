@@ -85,6 +85,8 @@ func (model Model) arrangeRows(rows []displayRow) []displayRow {
 	case TabConnections:
 		sortConnectionRows(rows, model.connectionSortMode)
 		return rows
+	case TabFirewallPorts:
+		return model.arrangeFirewallRows(rows)
 	default:
 		return rows
 	}

@@ -15,8 +15,20 @@ var severityOrder = []domain.Severity{
 // sourceOrder lists discovery sources in header order.
 var sourceOrder = []domain.Source{domain.SourceHost, domain.SourceDocker, domain.SourceExternal}
 
+// headerLineCount is the header height: the Overview shows the summary in its
+// own panel, so its header is the title line alone.
+func (model Model) headerLineCount() int {
+	if model.activeTab == TabSummary {
+		return overviewHeaderLineCount
+	}
+	return headerLineCount
+}
+
 // headerLines renders the title line, the severity chips and the risk line.
 func (model Model) headerLines(width int) []string {
+	if model.activeTab == TabSummary {
+		return []string{clampWidth(model.titleLine(), width)}
+	}
 	return []string{
 		clampWidth(model.titleLine(), width),
 		clampWidth(model.chipsLine(), width),

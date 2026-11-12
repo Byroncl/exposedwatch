@@ -10,26 +10,22 @@ import (
 	"github.com/Byroncl/exposedwatch/internal/domain"
 )
 
-func TestConnectionsTabIsTheFourthTab(testRun *testing.T) {
+func TestConnectionsModuleFollowsPortsAndHasLiveAsFirstTab(testRun *testing.T) {
 	model := newTestModel(testRun)
-	model = typeKeys(testRun, model, "4")
-	if model.activeTab != TabConnections || TabConnections.Title() != "Connections" {
-		testRun.Fatalf("tab = %v", model.activeTab)
-	}
 	model = typeKeys(testRun, model, "tab")
-	if model.activeTab != TabFindings {
-		testRun.Fatalf("tab wraps to %v", model.activeTab)
+	if model.activeModule != ModuleConnections || model.activeTab != TabConnections || TabConnections.Title() != "Connections" {
+		testRun.Fatalf("module = %v tab = %v", model.activeModule, model.activeTab)
 	}
 	model = typeKeys(testRun, model, "shift+tab")
-	if model.activeTab != TabConnections {
-		testRun.Fatalf("shift+tab from findings -> %v", model.activeTab)
+	if model.activeModule != ModulePorts || model.activeTab != TabFindings {
+		testRun.Fatalf("shift+tab from connections -> %v / %v", model.activeModule, model.activeTab)
 	}
-	model = typeKeys(testRun, model, "shift+tab")
-	if model.activeTab != TabChanges {
-		testRun.Fatalf("shift+tab from connections -> %v", model.activeTab)
+	model = typeKeys(testRun, model, "shift+tab", "shift+tab")
+	if model.activeModule != ModuleSettings {
+		testRun.Fatalf("shift+tab wraps through the module list, got %v", model.activeModule)
 	}
-	if got := typeKeys(testRun, model, "tab").activeTab; got != TabConnections {
-		testRun.Fatalf("tab from changes -> %v", got)
+	if got := typeKeys(testRun, model, "tab", "tab", "tab").activeTab; got != TabConnections {
+		testRun.Fatalf("tab from settings wraps to overview, ports, connections -> %v", got)
 	}
 }
 
@@ -52,7 +48,7 @@ func TestConnectionRowsHideLoopbackByDefaultAndToggleWithL(testRun *testing.T) {
 }
 
 func TestLoopbackKeyIsIgnoredOnOtherTabs(testRun *testing.T) {
-	model := typeKeys(testRun, newConnectionsModel(testRun, fullConnections()), "1", "l")
+	model := typeKeys(testRun, newConnectionsModel(testRun, fullConnections()), "shift+tab", "l")
 	if !model.hideLoopback {
 		testRun.Fatal("l must only act on the Connections tab")
 	}
@@ -189,7 +185,7 @@ func TestTruncatedSnapshotShowsNotice(testRun *testing.T) {
 func TestDisabledConnectionsShowAMessageAndIgnoreKeys(testRun *testing.T) {
 	model := New(Options{Scanner: fakeScanner{}, Interval: testInterval, Version: testVersion})
 	model = applyMessage(testRun, model, tea.WindowSizeMsg{Width: testWidth, Height: testHeight})
-	model = typeKeys(testRun, model, "4", "l", "s", "r", "/", "esc")
+	model = typeKeys(testRun, showModule(testRun, model, ModuleConnections), "l", "s", "r", "/", "esc")
 	rendered := model.View()
 	if !strings.Contains(rendered, "Connections are disabled") || strings.Contains(rendered, "Top remote addresses") {
 		testRun.Fatalf("disabled message missing:\n%s", rendered)
@@ -282,14 +278,14 @@ func TestHeaderShowsConnectionCounterAndDropsItWhenNarrow(testRun *testing.T) {
 
 func TestTabStripCountsDisplayedConnections(testRun *testing.T) {
 	model := newConnectionsModel(testRun, fullConnections())
-	if !strings.Contains(model.View(), "[4 Connections 5]") {
+	if !strings.Contains(model.View(), "[1 Live 5]") {
 		testRun.Fatalf("tab strip:\n%s", model.View())
 	}
-	other := typeKeys(testRun, model, "1")
-	if !strings.Contains(other.View(), " 4 Connections 5 ") {
+	other := typeKeys(testRun, model, "2")
+	if !strings.Contains(other.View(), " 1 Live 5 ") {
 		testRun.Fatalf("count must stay visible from other tabs:\n%s", other.View())
 	}
-	if shown := typeKeys(testRun, model, "l"); !strings.Contains(shown.View(), "[4 Connections 6]") {
+	if shown := typeKeys(testRun, model, "l"); !strings.Contains(shown.View(), "[1 Live 6]") {
 		testRun.Fatal("count must follow the loopback toggle")
 	}
 }
@@ -309,7 +305,7 @@ func TestConnectionsFooterAndHelpDescribeTheNewKeys(testRun *testing.T) {
 		testRun.Errorf("footer after l: %q", shown)
 	}
 	help := typeKeys(testRun, model, "?").View()
-	for _, expected := range []string{"1 / 2 / 3 / 4", "loopback"} {
+	for _, expected := range []string{"1-9", "loopback"} {
 		if !strings.Contains(help, expected) {
 			testRun.Errorf("help lacks %q:\n%s", expected, help)
 		}
@@ -319,7 +315,7 @@ func TestConnectionsFooterAndHelpDescribeTheNewKeys(testRun *testing.T) {
 func TestEmptyConnectionTableMessages(testRun *testing.T) {
 	model := New(Options{Scanner: fakeScanner{}, Connections: fakeConnectionSource{}, Interval: testInterval, Version: testVersion})
 	model = applyMessage(testRun, model, tea.WindowSizeMsg{Width: testWidth, Height: testHeight})
-	model = typeKeys(testRun, model, "4")
+	model = showModule(testRun, model, ModuleConnections)
 	if !strings.Contains(model.View(), "Reading connections") {
 		testRun.Fatalf("before the first read:\n%s", model.View())
 	}
@@ -369,7 +365,7 @@ func TestSelectionSurvivesConnectionRefresh(testRun *testing.T) {
 
 func TestSideBySidePanelsAreSeparatedByAGap(testRun *testing.T) {
 	model := newConnectionsModel(testRun, fullConnections())
-	for _, size := range []tea.WindowSizeMsg{{Width: 110, Height: 28}, {Width: 80, Height: 24}, {Width: 60, Height: 30}} {
+	for _, size := range []tea.WindowSizeMsg{{Width: 110, Height: 28}, {Width: 80, Height: 24}, {Width: 79, Height: 30}} {
 		sized := applyMessage(testRun, model, size)
 		rendered := sized.View()
 		for _, glued := range []string{"╮╭", "╯╰", "││"} {

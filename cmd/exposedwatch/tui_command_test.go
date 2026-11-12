@@ -113,3 +113,23 @@ func TestBuildConnectionSourceHonorsTheFlag(testRun *testing.T) {
 		testRun.Fatal("connections must be enabled by default")
 	}
 }
+
+func TestParseTuiOptionsFirewallIsEnabledByDefaultAndAcceptsNoFirewall(testRun *testing.T) {
+	options, err := parseTuiOptions(nil, &strings.Builder{})
+	if err != nil || options.NoFirewall {
+		testRun.Fatalf("options=%+v err=%v", options, err)
+	}
+	options, err = parseTuiOptions([]string{"--no-firewall"}, &strings.Builder{})
+	if err != nil || !options.NoFirewall {
+		testRun.Fatalf("options=%+v err=%v", options, err)
+	}
+}
+
+func TestBuildFirewallEvaluatorHonorsTheFlag(testRun *testing.T) {
+	if buildFirewallEvaluator(TuiOptions{NoFirewall: true}) != nil {
+		testRun.Fatal("--no-firewall must yield no evaluator, so the firewall is never read")
+	}
+	if buildFirewallEvaluator(TuiOptions{}) == nil {
+		testRun.Fatal("the firewall evaluator must be enabled by default")
+	}
+}

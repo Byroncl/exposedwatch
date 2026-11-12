@@ -11,8 +11,16 @@ import (
 	"github.com/Byroncl/exposedwatch/internal/tui"
 )
 
+// tuiLauncher starts the full-screen program; tui.Run in production.
+type tuiLauncher func(options tui.Options) error
+
 // runTui executes the tui subcommand.
 func runTui(arguments []string, stdout, stderr io.Writer) ExitCode {
+	return runTuiWith(systemRuntime(), tui.Run, isTerminal, arguments, stdout, stderr)
+}
+
+// runTuiWith is runTui with injectable runtime, launcher and terminal check.
+func runTuiWith(runtime commandRuntime, launch tuiLauncher, terminal func(io.Writer) bool, arguments []string, stdout, stderr io.Writer) ExitCode {
 	options, err := parseTuiOptions(arguments, stderr)
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -24,22 +32,29 @@ func runTui(arguments []string, stdout, stderr io.Writer) ExitCode {
 		}
 		return ExitUsage
 	}
-	if !isTerminal(stdout) {
+	if !terminal(stdout) {
 		fmt.Fprintln(stderr, nonTerminalMessage)
 		return ExitUsage
 	}
-	err = tui.Run(tui.Options{
-		Scanner:     app.NewScanService(buildSources(options.ScanOptions)),
-		Connections: buildConnectionSource(options),
-		Interval:    options.Interval,
-		Version:     version,
-		Theme:       options.Theme,
-	})
-	if err != nil {
+	if err := launch(buildTuiOptions(options, runtime)); err != nil {
 		fmt.Fprintf(stderr, tuiFailedFormat, err)
 		return ExitRuntimeError
 	}
 	return ExitOK
+}
+
+// buildTuiOptions wires the scanners and the alert settings into the tui.
+func buildTuiOptions(options TuiOptions, runtime commandRuntime) tui.Options {
+	return tui.Options{
+		Scanner:     app.NewScanService(buildSources(options.ScanOptions)),
+		Connections: buildConnectionSource(options),
+		Firewall:    buildFirewallEvaluator(options),
+		Settings:    newConfigSettingsStore(runtime, options.ConfigPath),
+		AlertTester: newTelegramAlertTester(runtime),
+		Interval:    options.Interval,
+		Version:     version,
+		Theme:       options.Theme,
+	}
 }
 
 // buildConnectionSource builds the connection service over the same proc
