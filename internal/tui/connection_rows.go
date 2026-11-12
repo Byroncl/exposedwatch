@@ -11,8 +11,25 @@ import (
 	"github.com/Byroncl/exposedwatch/internal/domain"
 )
 
+// connectionsPassingToggles lists the snapshot connections that the loopback
+// and inbound-only toggles let through. Summaries, counters and the table all
+// start from this set, so they always agree.
+func (model Model) connectionsPassingToggles() []domain.Connection {
+	passing := model.connectionsPassingLoopbackToggle()
+	if !model.inboundOnly {
+		return passing
+	}
+	inbound := make([]domain.Connection, 0, len(passing))
+	for _, connection := range passing {
+		if connection.Direction == domain.ConnectionInbound {
+			inbound = append(inbound, connection)
+		}
+	}
+	return inbound
+}
+
 // connectionsPassingLoopbackToggle lists the snapshot connections that the
-// loopback toggle lets through. Summaries and counts start from this set.
+// loopback toggle lets through.
 func (model Model) connectionsPassingLoopbackToggle() []domain.Connection {
 	all := model.connectionSnapshot.Connections
 	if !model.hideLoopback {
@@ -28,9 +45,9 @@ func (model Model) connectionsPassingLoopbackToggle() []domain.Connection {
 }
 
 // connectionRows builds the unsorted rows of the Connections tab: the
-// connections that pass the loopback toggle and the text filter.
+// connections that pass the toggles and the text filter.
 func (model Model) connectionRows() []displayRow {
-	connections := model.connectionsPassingLoopbackToggle()
+	connections := model.connectionsPassingToggles()
 	rows := make([]displayRow, 0, len(connections))
 	for _, connection := range connections {
 		if !connectionMatchesText(connection, model.connectionFilterText) {

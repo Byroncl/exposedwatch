@@ -1,0 +1,6 @@
+table ip filter
+table ip nat
+table ip mangle
+table ip raw
+table ip6 filter
+table ip6 nat

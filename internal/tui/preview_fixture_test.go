@@ -63,6 +63,12 @@ func previewConnections() []domain.Connection {
 // previewModel builds a model with a baseline, one NEW port and two closed ports.
 func previewModel(testRun *testing.T) Model {
 	testRun.Helper()
+	return previewModelWith(testRun, Options{})
+}
+
+// previewModelWith is previewModel with extra options (the settings store and tester).
+func previewModelWith(testRun *testing.T, extra Options) Model {
+	testRun.Helper()
 	var baseline []domain.Port
 	for _, port := range previewPorts() {
 		if port.Number != previewNewPortNumber {
@@ -71,10 +77,73 @@ func previewModel(testRun *testing.T) Model {
 	}
 	closedFirst := previewPort(3306, domain.TCP, "0.0.0.0", "mysqld", "", domain.SourceHost)
 	closedSecond := previewPort(3389, domain.TCP, "0.0.0.0", "xrdp", "", domain.SourceHost)
-	model := New(Options{Scanner: fakeScanner{}, Connections: fakeConnectionSource{}, Interval: testInterval, Version: testVersion})
+	extra.Scanner, extra.Connections, extra.Firewall = fakeScanner{}, fakeConnectionSource{}, &fakeFirewall{}
+	extra.Interval, extra.Version = testInterval, testVersion
+	model := New(extra)
 	model = refreshWith(testRun, model, previewReport(append(append([]domain.Port{}, baseline...), closedFirst, closedSecond)), 0)
 	model = refreshWith(testRun, model, previewReport(append(previewPorts(), closedSecond)), 1)
 	model = refreshWith(testRun, model, previewReport(previewPorts()), 2)
 	model = observeConnections(testRun, model, previewConnectionsBaseline(), 0)
-	return observeConnections(testRun, model, previewConnections(), 130)
+	model = observeConnections(testRun, model, previewConnections(), 130)
+	return applyMessage(testRun, model, FirewallResultMessage{Report: previewFirewallReport(), At: timeAfter(2)})
+}
+
+// previewFirewallReport evaluates the preview ports with one verdict of every kind.
+func previewFirewallReport() domain.FirewallReport {
+	verdicts := map[int]struct {
+		verdict domain.FirewallVerdict
+		reason  string
+	}{
+		22:   {domain.FirewallAllowed, "INPUT accepts new tcp/22 from any source"},
+		23:   {domain.FirewallBlocked, "INPUT drops new tcp/23: no accept rule and the default policy is DROP"},
+		80:   {domain.FirewallUnknown, "a rule uses a match the engine does not evaluate"},
+		443:  {domain.FirewallAllowed, "INPUT accepts new tcp/443 from any source"},
+		631:  {domain.FirewallNotExposed, "listens on loopback only, so it is not reachable from outside"},
+		2375: {domain.FirewallBlocked, "INPUT rejects new tcp/2375 from any source"},
+		5432: {domain.FirewallRestricted, "INPUT accepts new tcp/5432 only from 10.0.0.0/8"},
+		6379: {domain.FirewallDockerPublished, "published by Docker; usually bypasses INPUT and ufw rules"},
+		8080: {domain.FirewallDockerPublished, "published by Docker; usually bypasses INPUT and ufw rules"},
+		9000: {domain.FirewallDockerPublished, "published by Docker; usually bypasses INPUT and ufw rules"},
+		53:   {domain.FirewallNotExposed, "listens on loopback only, so it is not reachable from outside"},
+	}
+	var findings []domain.FirewallFinding
+	for _, port := range previewPorts() {
+		if entry, evaluated := verdicts[port.Number]; evaluated && port.Source != domain.SourceExternal {
+			findings = append(findings, firewallFinding(port, entry.verdict, entry.reason))
+		}
+	}
+	return domain.FirewallReport{Backend: "iptables-save", Available: true, Findings: findings, Notes: []string{"IPv6 rules were not readable"}}
+}
+
+// previewUnavailableFirewallReport is what a normal user gets: no rules, every exposed port unknown.
+func previewUnavailableFirewallReport() domain.FirewallReport {
+	var findings []domain.FirewallFinding
+	for _, port := range previewPorts() {
+		if port.Source != domain.SourceExternal {
+			findings = append(findings, firewallFinding(port, domain.FirewallUnknown, "needs root to read firewall rules"))
+		}
+	}
+	return domain.FirewallReport{Backend: domain.BackendUnknown, Findings: findings, Notes: []string{"needs root to read firewall rules"}}
+}
+
+// previewSettingsModel is the preview fixture with a configured (file-sourced) Telegram setup.
+func previewSettingsModel(testRun *testing.T) Model {
+	testRun.Helper()
+	return previewSettingsModelFor(testRun, configuredSettings())
+}
+
+// previewEnvironmentSettingsModel has the token and chat id coming from the environment.
+func previewEnvironmentSettingsModel(testRun *testing.T) Model {
+	testRun.Helper()
+	settings := configuredSettings()
+	settings.TokenSource = SettingSourceEnvironment
+	settings.ChatSource = SettingSourceEnvironment
+	return previewSettingsModelFor(testRun, settings)
+}
+
+func previewSettingsModelFor(testRun *testing.T, settings AlertSettings) Model {
+	testRun.Helper()
+	store := &fakeSettingsStore{settings: settings}
+	model := previewModelWith(testRun, Options{Settings: store, AlertTester: &fakeAlertTester{}})
+	return applyMessage(testRun, model, settingsLoadCommand(store)())
 }

@@ -13,6 +13,9 @@ func (model Model) acceptsSortAndSearch() bool {
 	if model.activeTab == TabConnections && !model.connectionsEnabled() {
 		return false
 	}
+	if model.activeTab == TabFirewallPorts && !model.firewallEnabled() {
+		return false
+	}
 	return model.activeTab.supportsSortAndSearch()
 }
 
@@ -34,19 +37,29 @@ func (model Model) handleConnectionsResult(result ConnectionsResultMessage) Mode
 }
 
 // toggleLoopback shows or hides loopback-to-loopback connections. It only
-// acts on the Connections tab.
+// acts on the connection views (Live and Top remote).
 func (model *Model) toggleLoopback() {
-	if model.activeTab != TabConnections || !model.connectionsEnabled() {
+	if !model.activeTab.usesConnections() || !model.connectionsEnabled() {
 		return
 	}
 	model.hideLoopback = !model.hideLoopback
 	model.rebuildVisibleRows()
 }
 
+// toggleInboundOnly shows only inbound connections, or all of them again. It
+// only acts on the connection views (Live and Top remote).
+func (model *Model) toggleInboundOnly() {
+	if !model.activeTab.usesConnections() || !model.connectionsEnabled() {
+		return
+	}
+	model.inboundOnly = !model.inboundOnly
+	model.rebuildVisibleRows()
+}
+
 // refreshConnectionCaches recomputes the summary of the connections that pass
-// the loopback toggle and the count that also passes the text filter.
+// the toggles and the count that also passes the text filter.
 func (model *Model) refreshConnectionCaches() {
-	connections := model.connectionsPassingLoopbackToggle()
+	connections := model.connectionsPassingToggles()
 	model.connectionSummary = app.SummarizeConnections(connections)
 	displayed := 0
 	for _, connection := range connections {

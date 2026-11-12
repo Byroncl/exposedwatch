@@ -41,6 +41,12 @@ func run(arguments []string, stdout, stderr io.Writer) ExitCode {
 		return ExitOK
 	case commandScan:
 		return runScan(arguments[1:], stdout, stderr)
+	case commandBaseline:
+		return runBaseline(arguments[1:], stdout, stderr)
+	case commandWatch:
+		return runWatch(arguments[1:], stdout, stderr)
+	case commandNotifyTest:
+		return runNotifyTest(arguments[1:], stdout, stderr)
 	case commandTui:
 		return runTui(arguments[1:], stdout, stderr)
 	case commandVersion:

@@ -15,9 +15,17 @@ func (model Model) Update(incomingMessage tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMessage:
 		return model.handleTick()
 	case RefreshResultMessage:
-		return model.handleRefreshResult(typedMessage), nil
+		return model.handleRefreshResult(typedMessage)
 	case ConnectionsResultMessage:
 		return model.handleConnectionsResult(typedMessage), nil
+	case FirewallResultMessage:
+		return model.handleFirewallResult(typedMessage), nil
+	case SettingsLoadedMessage:
+		return model.handleSettingsLoaded(typedMessage), nil
+	case SettingsSavedMessage:
+		return model.handleSettingsSaved(typedMessage)
+	case AlertTestResultMessage:
+		return model.handleAlertTestResult(typedMessage), nil
 	case tea.KeyMsg:
 		return model.handleKey(typedMessage)
 	default:
@@ -30,12 +38,13 @@ func (model Model) Update(incomingMessage tea.Msg) (tea.Model, tea.Cmd) {
 // the other.
 func (model Model) handleTick() (tea.Model, tea.Cmd) {
 	commands := []tea.Cmd{tickCommand(model.interval)}
-	commands = append(commands, model.startIdleReads()...)
+	commands = append(commands, model.startIdleReads(false)...)
 	return model, tea.Batch(commands...)
 }
 
 // startIdleReads marks the idle reads as running and returns their commands.
-func (model *Model) startIdleReads() []tea.Cmd {
+// The firewall evaluation is throttled; forceFirewall skips the throttle.
+func (model *Model) startIdleReads(forceFirewall bool) []tea.Cmd {
 	var commands []tea.Cmd
 	if !model.refreshing {
 		model.refreshing = true
@@ -45,21 +54,25 @@ func (model *Model) startIdleReads() []tea.Cmd {
 		model.connectionsRefreshing = true
 		commands = append(commands, connectionsCommand(model.connections, model.clock))
 	}
+	if command := model.startFirewallRead(forceFirewall); command != nil {
+		commands = append(commands, command)
+	}
 	return commands
 }
 
 // handleRefreshResult stores a scan outcome. A failed scan keeps the previous
 // data and never touches the change tracker, so it cannot fake closed ports.
-func (model Model) handleRefreshResult(result RefreshResultMessage) Model {
+// A good scan may start the firewall evaluation of its ports.
+func (model Model) handleRefreshResult(result RefreshResultMessage) (Model, tea.Cmd) {
 	model.refreshing = false
 	model.lastRefresh = result.At
 	model.refreshErr = result.Err
 	if result.Err != nil {
-		return model
+		return model, nil
 	}
 	model.report = result.Report
 	model.hasReport = true
 	model.tracker = model.tracker.observe(result.Report, result.At)
 	model.rebuildVisibleRows()
-	return model
+	return model, model.startFirewallRead(false)
 }

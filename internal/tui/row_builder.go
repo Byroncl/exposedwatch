@@ -11,8 +11,12 @@ func (model Model) buildRows(tab TabID) []displayRow {
 		return model.portRows()
 	case TabConnections:
 		return model.connectionRows()
-	default:
+	case TabFirewallPorts:
+		return model.firewallRows()
+	case TabChanges:
 		return model.changeRows()
+	default:
+		return nil
 	}
 }
 
@@ -20,7 +24,7 @@ func (model Model) decorate(row displayRow) displayRow {
 	identity := app.IdentityOf(row.port)
 	row.isNew = model.tracker.isNew(identity)
 	row.firstSeen, row.hasFirstSeen = model.tracker.firstSeenAt(identity)
-	return row
+	return model.withFirewall(row)
 }
 
 func (model Model) findingRows() []displayRow {

@@ -10,6 +10,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # A release normally takes a couple of minutes; anything over 10 is stuck.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:

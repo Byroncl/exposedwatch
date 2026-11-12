@@ -17,6 +17,10 @@ type ScanOptions struct {
 	ProcRoot     string
 	DockerSocket string
 	NoDocker     bool
+	// Firewall adds the firewall verdicts of the listening ports (information only).
+	Firewall bool
+	// BaselineFile, when set, switches the scan to drift mode.
+	BaselineFile string
 
 	External         bool
 	ExternalTargets  nmapscan.TargetList
@@ -37,6 +41,8 @@ func parseScanOptions(arguments []string, errorOutput io.Writer) (ScanOptions, e
 	flagSet.StringVar(&options.ProcRoot, flagProcRoot, defaultProcRoot, usageProcRoot)
 	flagSet.StringVar(&options.DockerSocket, flagDockerSocket, defaultDockerSock, usageDockerSocket)
 	flagSet.BoolVar(&options.NoDocker, flagNoDocker, false, usageNoDocker)
+	flagSet.BoolVar(&options.Firewall, flagFirewall, false, usageFirewall)
+	flagSet.StringVar(&options.BaselineFile, flagBaseline, "", usageBaseline)
 	flagSet.BoolVar(&options.External, flagExternal, false, usageExternal)
 	var rawTargets stringListFlag
 	flagSet.Var(&rawTargets, flagExternalTarget, usageExternalTarget)
@@ -49,6 +55,9 @@ func parseScanOptions(arguments []string, errorOutput io.Writer) (ScanOptions, e
 	}
 	if flagSet.NArg() > 0 {
 		return ScanOptions{}, usageError{fmt.Sprintf(unexpectedArgsFmt, flagSet.Args())}
+	}
+	if err := rejectEmptyFlag(flagSet, flagBaseline, options.BaselineFile); err != nil {
+		return ScanOptions{}, err
 	}
 	options.Format = OutputFormat(*formatText)
 	if options.Format != FormatTable && options.Format != FormatJSON {

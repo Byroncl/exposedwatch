@@ -2,15 +2,18 @@ package tui
 
 // Vertical budget of one frame, in lines.
 const (
-	headerLineCount      = 3
-	tabLineCount         = 1
-	footerLineCount      = 1
-	panelBorderLineCount = 2
-	tableHeadingLines    = 1
-	detailContentLines   = 7
-	minTableRowsToShow   = 5
-	maxWarningLines      = 3
-	scrollOffsetFloor    = 0
+	headerLineCount = 3
+	// overviewHeaderLineCount: the Overview shows the summary itself, so the
+	// header keeps only the title line.
+	overviewHeaderLineCount = 1
+	tabLineCount            = 1
+	footerLineCount         = 1
+	panelBorderLineCount    = 2
+	tableHeadingLines       = 1
+	detailContentLines      = 8
+	minTableRowsToShow      = 5
+	maxWarningLines         = 3
+	scrollOffsetFloor       = 0
 )
 
 // Horizontal budget of one frame, in cells.
@@ -42,19 +45,23 @@ const (
 // Column priorities: lower numbers are kept first when the width is short.
 const (
 	priorityMandatory = iota
-	priorityExposure
 	priorityProcess
+	priorityExposure
 	priorityBind
 	prioritySource
 	priorityKind
 	priorityConnectionAge
 	priorityConnectionState
 	priorityLocalBind
+	// priorityFirewall is the last to be kept: the FW column drops first.
+	priorityFirewall
 )
 
 // Footer hint drop ranks: higher ranks disappear first on narrow terminals.
 const (
 	dropRankNever = iota
+	dropRankInnerTabs
+	dropRankInbound
 	dropRankLoopback
 	dropRankMove
 	dropRankRefresh
@@ -62,4 +69,5 @@ const (
 	dropRankFilter
 	dropRankMinimum
 	dropRankEnds
+	dropRankSidebar
 )

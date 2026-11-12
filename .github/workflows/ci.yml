@@ -8,9 +8,16 @@ on:
 permissions:
   contents: read
 
+# A newer run for the same ref replaces the older one instead of piling up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Normal runs finish in well under a minute; anything over 10 is stuck.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

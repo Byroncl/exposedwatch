@@ -7,8 +7,19 @@ type layout struct {
 	width    int
 	height   int
 	warnings []string
+	// headerLines is the height of the header; columnLines is the height left
+	// for the sidebar and the content area between the header and the footer.
+	headerLines int
+	columnLines int
+	// sidebar is the sidebar mode, sidebarWidth its outer width (0 when hidden)
+	// and contentWidth the width of the content area next to it.
+	sidebar      SidebarMode
+	sidebarWidth int
+	contentWidth int
+	// panelLines is the height of the content area below the tab strip.
+	panelLines int
 	// showDetail tells whether the bottom area (the Details panel, or the
-	// summary panels of the Connections tab) fits.
+	// summary panels of the Live connections tab) fits.
 	showDetail bool
 	tableRows  int
 }
@@ -34,6 +45,7 @@ func (model Model) warningLines() []string {
 		lines = append(lines, fmt.Sprintf(refreshWarningFormat, model.refreshErr))
 	}
 	lines = append(lines, model.connectionWarningLines()...)
+	lines = append(lines, model.firewallWarningLines()...)
 	if len(lines) > maxWarningLines {
 		hidden := len(lines) - (maxWarningLines - 1)
 		lines = append(lines[:maxWarningLines-1], fmt.Sprintf(moreWarningsFormat, hidden))
@@ -41,25 +53,39 @@ func (model Model) warningLines() []string {
 	return lines
 }
 
-// computeLayout decides how many rows the table and the detail panel get.
+// computeLayout decides the sidebar, the content width and how many rows the
+// table and the detail panel get.
 func (model Model) computeLayout() layout {
 	width, height := model.effectiveSize()
+	sidebar := sidebarModeFor(width, model.sidebarHidden)
+	sidebarWidth := sidebar.cellWidth()
+	contentWidth := width
+	if sidebarWidth > 0 {
+		contentWidth = width - sidebarWidth - sidebarContentGap
+	}
 	warnings := model.warningLines()
-	fixedLines := headerLineCount + tabLineCount + len(warnings) + footerLineCount
-	bodyLines := height - fixedLines
+	headerLines := model.headerLineCount()
+	columnLines := max(height-headerLines-len(warnings)-footerLineCount, 0)
+	panelLines := max(columnLines-tabLineCount, 0)
 	tableChrome := panelBorderLineCount + tableHeadingLines
-	detailOuter := model.bottomOuterLines(width)
-	showDetail := model.hasBottomArea() && bodyLines-detailOuter-tableChrome >= minTableRowsToShow
-	tableOuter := bodyLines
+	detailOuter := model.bottomOuterLines(contentWidth)
+	showDetail := model.hasBottomArea() && panelLines-detailOuter-tableChrome >= minTableRowsToShow
+	tableOuter := panelLines
 	if showDetail {
 		tableOuter -= detailOuter
 	}
 	return layout{
-		width:      width,
-		height:     height,
-		warnings:   warnings,
-		showDetail: showDetail,
-		tableRows:  max(tableOuter-tableChrome, 0),
+		width:        width,
+		height:       height,
+		warnings:     warnings,
+		headerLines:  headerLines,
+		columnLines:  columnLines,
+		sidebar:      sidebar,
+		sidebarWidth: sidebarWidth,
+		contentWidth: contentWidth,
+		panelLines:   panelLines,
+		showDetail:   showDetail,
+		tableRows:    max(tableOuter-tableChrome, 0),
 	}
 }
 

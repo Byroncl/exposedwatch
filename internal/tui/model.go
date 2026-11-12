@@ -14,6 +14,13 @@ type Options struct {
 	Scanner Scanner
 	// Connections feeds the Connections tab; nil disables it.
 	Connections ConnectionSnapshotter
+	// Firewall feeds the Firewall module; nil disables it and the firewall is never read.
+	Firewall FirewallEvaluator
+	// Settings loads and saves the Telegram alert configuration; nil makes the
+	// Settings form and the Alerts module report that they are not available.
+	Settings SettingsStore
+	// AlertTester sends the test message of the Settings form; nil disables it.
+	AlertTester AlertTester
 	Interval    time.Duration
 	Version     string
 	// Theme selects the palette adaptation; the zero value means ThemeAuto.
@@ -47,14 +54,37 @@ type Model struct {
 	connectionsErr        error
 	connectionTracker     connectionTracker
 	// connectionSummary and connectionDisplayCount describe the connections
-	// that pass the loopback toggle (and, for the count, the text filter).
+	// that pass the loopback and inbound-only toggles (and, for the count, the text filter).
 	connectionSummary      app.ConnectionSummary
 	connectionDisplayCount int
 	hideLoopback           bool
+	inboundOnly            bool
 	connectionSortMode     ConnectionSortMode
 	connectionFilterText   string
 
-	activeTab    TabID
+	// The firewall evaluation is independent from the scan: its own command,
+	// message and throttle. firewallSignature is the host port set that was
+	// last submitted, so a change of the ports can trigger a new evaluation.
+	firewall            FirewallEvaluator
+	firewallReport      domain.FirewallReport
+	firewallIndex       map[firewallPortKey]domain.FirewallFinding
+	hasFirewall         bool
+	firewallAt          time.Time
+	firewallRequestedAt time.Time
+	firewallSignature   string
+	firewallRefreshing  bool
+	firewallErr         error
+	firewallSortMode    FirewallSortMode
+	firewallFilterText  string
+
+	// activeModule and innerTabs (the remembered inner tab of every module)
+	// choose activeTab, the view the content area shows.
+	activeModule  Module
+	innerTabs     [moduleCount]InnerTab
+	activeTab     TabID
+	sidebarHidden bool
+	theme         Theme
+
 	visibleRows  []displayRow
 	cursor       int
 	scrollOffset int
@@ -64,6 +94,9 @@ type Model struct {
 	filterText  string
 	filterInput string
 	viewState   ViewState
+
+	// settings holds the Telegram form and the saved alert configuration.
+	settings settingsState
 
 	styles styles
 }
@@ -78,19 +111,29 @@ func New(options Options) Model {
 	if interval < MinimumInterval {
 		interval = DefaultInterval
 	}
+	theme := options.Theme
+	if theme == "" {
+		theme = ThemeAuto
+	}
 	return Model{
-		scanner:    options.Scanner,
-		interval:   interval,
-		version:    options.Version,
-		clock:      clock,
-		refreshing: true,
-		tracker:    newChangeTracker(),
-		styles:     newStyles(),
+		scanner:      options.Scanner,
+		theme:        theme,
+		activeModule: ModulePorts,
+		activeTab:    TabFindings,
+		interval:     interval,
+		version:      options.Version,
+		clock:        clock,
+		refreshing:   true,
+		tracker:      newChangeTracker(),
+		styles:       newStyles(),
 
 		connections:           options.Connections,
 		connectionsRefreshing: options.Connections != nil,
 		connectionTracker:     newConnectionTracker(),
 		hideLoopback:          true,
+
+		firewall: options.Firewall,
+		settings: settingsState{store: options.Settings, tester: options.AlertTester},
 	}
 }
 
@@ -99,6 +142,9 @@ func (model Model) Init() tea.Cmd {
 	commands := []tea.Cmd{scanCommand(model.scanner, model.clock), tickCommand(model.interval)}
 	if model.connectionsEnabled() {
 		commands = append(commands, connectionsCommand(model.connections, model.clock))
+	}
+	if model.settings.isAvailable() {
+		commands = append(commands, settingsLoadCommand(model.settings.store))
 	}
 	return tea.Batch(commands...)
 }
