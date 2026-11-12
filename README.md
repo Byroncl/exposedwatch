@@ -6,6 +6,8 @@ English | [Español](README.es.md)
 [![Release](https://img.shields.io/github/v/release/Byroncl/exposedwatch)](https://github.com/Byroncl/exposedwatch/releases/latest)
 [![License](https://img.shields.io/github/license/Byroncl/exposedwatch)](LICENSE)
 
+> **Status: beta (v0.x). Not yet audited by an independent human security reviewer.** See [SECURITY.md](SECURITY.md) to report a vulnerability.
+
 See what your Linux server exposes to the network, live in your terminal, and get flagged when something risky is open, such as a database bound to `0.0.0.0`.
 
 It reads the host's listening ports (from `/proc/net`) and Docker containers' published ports.
@@ -374,6 +376,32 @@ Only conservative hardening is suggested. Stricter sandboxing options may break 
 EXPOSEDWATCH_TELEGRAM_TOKEN=<token>
 EXPOSEDWATCH_TELEGRAM_CHAT_ID=<chat id>
 ```
+
+## Status and what is verified
+
+Verified:
+
+- Installs and runs from the published `.deb` on Debian 12 and Ubuntu 22.04 and 24.04 (`amd64`) in clean containers, and removes cleanly.
+- Developed and run on Debian 13.
+- The code is covered by an automated test suite, and the security-sensitive parts were reviewed with automated adversarial review. There has been no independent human audit.
+
+Not verified yet:
+
+- The firewall module against real rules as root (only fixtures and the non-root path were exercised).
+- Real Telegram delivery.
+- The TUI rendering across terminals and colors.
+- Cron and systemd usage.
+- The `arm64` package.
+- Distributions other than Debian and Ubuntu.
+- Hand-made native nftables `table ip filter` rules are not detected.
+
+## Security and responsible use
+
+- It can run as root (for process names and firewall rules), with the privileges of the user who starts it.
+- It only reads the firewall: it never changes firewall rules.
+- The optional nmap scan (`--external`) must only target systems you own or are allowed to test.
+- Secrets stay out of logs: the Telegram bot token is shown masked and removed from errors and logs.
+- To report a vulnerability, follow [SECURITY.md](SECURITY.md). Do not open a public issue.
 
 ## Install
 

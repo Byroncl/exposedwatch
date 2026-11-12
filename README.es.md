@@ -6,6 +6,8 @@
 [![Release](https://img.shields.io/github/v/release/Byroncl/exposedwatch)](https://github.com/Byroncl/exposedwatch/releases/latest)
 [![License](https://img.shields.io/github/license/Byroncl/exposedwatch)](LICENSE)
 
+> **Estado: beta (v0.x). Aún no ha sido auditado por un revisor de seguridad humano independiente.** Consulta [SECURITY.md](SECURITY.md) para reportar una vulnerabilidad.
+
 Muestra en tu terminal, en tiempo real, qué expone tu servidor Linux a la red y avisa cuando hay algo riesgoso abierto, como una base de datos enlazada a `0.0.0.0`.
 
 Lee los puertos en escucha del host (desde `/proc/net`) y los puertos publicados de los contenedores Docker.
@@ -374,6 +376,32 @@ Solo se sugiere un endurecimiento conservador. Opciones de aislamiento más estr
 EXPOSEDWATCH_TELEGRAM_TOKEN=<token>
 EXPOSEDWATCH_TELEGRAM_CHAT_ID=<id del chat>
 ```
+
+## Estado y qué está verificado
+
+Verificado:
+
+- Se instala y funciona desde el `.deb` publicado en Debian 12 y Ubuntu 22.04 y 24.04 (`amd64`) en contenedores limpios, y se desinstala sin dejar restos.
+- Desarrollado y ejecutado en Debian 13.
+- El código está cubierto por una suite de pruebas automatizadas, y las partes sensibles para la seguridad se revisaron con revisión adversarial automatizada. No ha habido una auditoría humana independiente.
+
+Aún no verificado:
+
+- El módulo de firewall con reglas reales como root (solo se ejercitaron datos de prueba y la ruta sin root).
+- El envío real a Telegram.
+- La visualización de la TUI en distintas terminales y colores.
+- El uso con cron y systemd.
+- El paquete `arm64`.
+- Distribuciones distintas de Debian y Ubuntu.
+- Las reglas nativas de nftables `table ip filter` hechas a mano no se detectan.
+
+## Seguridad y uso responsable
+
+- Puede ejecutarse como root (para nombres de proceso y reglas del firewall), con los privilegios del usuario que lo inicia.
+- Solo lee el firewall: nunca modifica sus reglas.
+- El escaneo opcional con nmap (`--external`) solo debe apuntar a sistemas que sean tuyos o que tengas permiso para probar.
+- Los secretos no aparecen en los logs: el token del bot de Telegram se muestra enmascarado y se elimina de los errores y logs.
+- Para reportar una vulnerabilidad, sigue [SECURITY.md](SECURITY.md). No abras un issue público.
 
 ## Instalación
 

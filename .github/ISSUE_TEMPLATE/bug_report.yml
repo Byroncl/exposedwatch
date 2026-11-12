@@ -1,0 +1,69 @@
+name: Bug report
+description: Something does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy warning.** Never paste bot tokens, chat ids, real IP addresses, or the contents of your baseline or config files. Replace them with fake values (documentation IPs such as `203.0.113.10`).
+
+        Security vulnerabilities must not be reported here. Use the private advisory form linked in the issue chooser.
+  - type: input
+    id: version
+    attributes:
+      label: exposedwatch version
+      description: Output of `exposedwatch version`.
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How was it installed?
+      options:
+        - .deb package
+        - Tarball
+        - go install
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+      placeholder: Debian 12, amd64
+    validations:
+      required: true
+  - type: dropdown
+    id: root
+    attributes:
+      label: Did it run as root?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Exact command
+      placeholder: sudo exposedwatch scan --format json
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or output
+      description: Remove tokens, chat ids and real IP addresses first.
+      render: text
