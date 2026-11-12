@@ -383,11 +383,13 @@ Verificado:
 
 - Se instala y funciona desde el `.deb` publicado en Debian 12 y Ubuntu 22.04 y 24.04 (`amd64`) en contenedores limpios, y se desinstala sin dejar restos.
 - Desarrollado y ejecutado en Debian 13.
+- El módulo de firewall como root contra reglas reales de `iptables` (v1.8.10, backend nf_tables) en Ubuntu 24.04, dentro de una red de contenedor aislada: un puerto aceptado por una regla se informa como `allowed`, uno aceptado solo desde un rango de origen como `restricted` y uno descartado por la política por defecto como `blocked`.
+- El modo línea base como root: el directorio de estado y el archivo se crean con `0700` y `0600` bajo `/var/lib/exposedwatch`, la deriva da el código de salida 4 y se rechaza un directorio de estado escribible por otros.
 - El código está cubierto por una suite de pruebas automatizadas, y las partes sensibles para la seguridad se revisaron con revisión adversarial automatizada. No ha habido una auditoría humana independiente.
 
 Aún no verificado:
 
-- El módulo de firewall con reglas reales como root (solo se ejercitaron datos de prueba y la ruta sin root).
+- El módulo de firewall con `ufw`, el backend `iptables-legacy`, los puertos publicados por Docker y las reglas nativas de nftables (para esos casos solo se ejercitaron datos de prueba), y en un equipo físico en lugar de un contenedor.
 - El envío real a Telegram.
 - La visualización de la TUI en distintas terminales y colores.
 - El uso con cron y systemd.

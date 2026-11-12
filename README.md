@@ -383,11 +383,13 @@ Verified:
 
 - Installs and runs from the published `.deb` on Debian 12 and Ubuntu 22.04 and 24.04 (`amd64`) in clean containers, and removes cleanly.
 - Developed and run on Debian 13.
+- The firewall module as root against real `iptables` rules (v1.8.10, nf_tables backend) on Ubuntu 24.04, inside an isolated container network: a port accepted by a rule is reported `allowed`, one accepted only from a source range `restricted`, and one dropped by the default policy `blocked`.
+- Baseline mode as root: the state directory and file are created `0700` and `0600` under `/var/lib/exposedwatch`, drift gives exit code 4, and a state directory writable by others is refused.
 - The code is covered by an automated test suite, and the security-sensitive parts were reviewed with automated adversarial review. There has been no independent human audit.
 
 Not verified yet:
 
-- The firewall module against real rules as root (only fixtures and the non-root path were exercised).
+- The firewall module with `ufw`, the `iptables-legacy` backend, Docker-published ports and native nftables rules (only fixtures were exercised for those), and on a physical host rather than a container.
 - Real Telegram delivery.
 - The TUI rendering across terminals and colors.
 - Cron and systemd usage.
