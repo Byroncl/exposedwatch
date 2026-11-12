@@ -10,7 +10,7 @@ import (
 // renderCell draws one cell padded to exactly width cells.
 func (palette styles) renderCell(content cell, width int, selected bool) string {
 	look := content.look
-	if selected {
+	if selected && !hasOwnBackground(look) {
 		look = look.Background(colorSelected)
 	}
 	if !content.chip {
@@ -19,6 +19,13 @@ func (palette styles) renderCell(content cell, width int, selected bool) string 
 	label := clampWidth(strings.Repeat(columnSeparator, chipSidePadding)+content.text+strings.Repeat(columnSeparator, chipSidePadding), width)
 	gap := strings.Repeat(" ", max(width-lipgloss.Width(label), 0))
 	return look.Render(label) + palette.rowGap(selected).Render(gap)
+}
+
+// hasOwnBackground reports whether a look paints its own background, as chips
+// and badges do. The selection highlight must never replace it.
+func hasOwnBackground(look lipgloss.Style) bool {
+	_, unset := look.GetBackground().(lipgloss.NoColor)
+	return !unset
 }
 
 // rowGap styles the spaces between cells.
