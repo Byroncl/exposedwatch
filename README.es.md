@@ -12,6 +12,10 @@ Muestra en tu terminal, en tiempo real, qué expone tu servidor Linux a la red y
 
 Lee los puertos en escucha del host (desde `/proc/net`) y los puertos publicados de los contenedores Docker.
 
+![Vista interactiva de exposedwatch: hallazgos por severidad, con la barra lateral de módulos y el panel de detalle](docs/images/findings.png)
+
+*Ejemplo con datos de muestra (rangos de IP de documentación), no un servidor real.*
+
 ## Inicio rápido
 
 En Ubuntu/Debian (`amd64` o `arm64`):
@@ -149,6 +153,22 @@ Las reglas se leen en segundo plano con su propio límite de tiempo: tras el pri
 - Los puertos publicados por Docker se etiquetan como `docker`, nunca como `blocked`.
 - Un veredicto es una estimación para una conexión entrante nueva desde un origen externo. Todo lo que el motor no entiende deja el veredicto en `unknown`.
 - Se validó únicamente con datos de prueba (fixtures), no con conjuntos de reglas reales en equipos reales.
+
+### Capturas
+
+Todas las capturas usan datos de muestra (rangos de IP de documentación), no un servidor real.
+
+**Resumen (Overview)**: riesgo general, peores hallazgos, cambios recientes y direcciones remotas más activas.
+
+![Módulo Overview](docs/images/overview.png)
+
+**Firewall**: un veredicto por puerto expuesto (allowed, restricted, blocked, unknown, publicado por Docker, no expuesto), con su razón.
+
+![Módulo Firewall, pestaña Ports](docs/images/firewall.png)
+
+**Conexiones**: quién está conectado ahora, entrantes y salientes, con las direcciones remotas más activas.
+
+![Módulo Connections, pestaña Live](docs/images/connections.png)
 
 ## Scripts, cron y CI: `scan`
 

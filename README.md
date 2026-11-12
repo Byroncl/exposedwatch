@@ -12,6 +12,10 @@ See what your Linux server exposes to the network, live in your terminal, and ge
 
 It reads the host's listening ports (from `/proc/net`) and Docker containers' published ports.
 
+![exposedwatch interactive view: findings by severity, with the module sidebar and the details panel](docs/images/findings.png)
+
+*Example with sample data (documentation IP ranges), not a real server.*
+
 ## Quick start
 
 On Ubuntu/Debian (`amd64` or `arm64`):
@@ -149,6 +153,22 @@ The rules are read in the background with their own timeout: after the first sca
 - Docker-published ports are labelled `docker`, never `blocked`.
 - A verdict is an estimate for a new inbound connection from an external source. Anything the engine does not understand makes the verdict `unknown`.
 - It was validated against fixtures only, not against real rule sets on real machines.
+
+### Screenshots
+
+All screenshots use sample data (documentation IP ranges), not a real server.
+
+**Overview**: overall risk, worst findings, recent changes and top remote addresses.
+
+![Overview module](docs/images/overview.png)
+
+**Firewall**: one verdict per exposed port (allowed, restricted, blocked, unknown, Docker-published, not exposed), with the reason.
+
+![Firewall module, ports tab](docs/images/firewall.png)
+
+**Connections**: who is connected now, inbound and outbound, with the busiest remote addresses.
+
+![Connections module, live tab](docs/images/connections.png)
 
 ## Scripts, cron and CI: `scan`
 
